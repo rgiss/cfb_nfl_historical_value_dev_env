@@ -1,0 +1,5 @@
+historical_value_streamlit_app/cfb_nfl_historical_value_estimate.csv
+nfl_historical_value_R_app/cfb_nfl_historical_value_estimate.csv
+misc/
+Data & Modeling/data/raw_data/
+.DS_Store

@@ -1,0 +1,47 @@
+drop table nfl_players;
+create table nfl_players
+(   index int,
+    gsis_id varchar(255),
+    display_name varchar(255),
+    common_first_name varchar(255),
+    first_name varchar(255),
+    last_name varchar(255),
+    short_name varchar(255),
+    football_name varchar(255),
+    suffix varchar(255),
+    esb_id varchar(255),
+    nfl_id double precision,
+    pfr_id varchar(255),
+    pff_id double precision,
+    otc_id double precision,
+    espn_id double precision,
+    smart_id varchar(255),
+    birth_date varchar(255),
+    position_group varchar(255),
+    position varchar(255),
+    ngs_position_group varchar(255),
+    ngs_position varchar(255),
+    height double precision,
+    weight double precision,
+    headshot varchar(255),
+    college_name varchar(255),
+    college_conference varchar(255),
+    jersey_number double precision,
+    rookie_season int,
+    last_season int,
+    latest_team varchar(255),
+    status varchar(255),
+    ngs_status varchar(255),
+    ngs_status_short_description varchar(255),
+    years_of_experience int,
+    pff_position varchar(255),
+    pff_status varchar(255),
+    draft_year double precision,
+    draft_round double precision,
+    draft_pick double precision,
+    draft_team varchar(255)
+);
+copy nfl_players(index, gsis_id, display_name, common_first_name, first_name, last_name, short_name, football_name, suffix, esb_id, nfl_id, pfr_id, pff_id, otc_id, espn_id, smart_id, birth_date, position_group, position, ngs_position_group, ngs_position, height, weight, headshot, college_name, college_conference, jersey_number, rookie_season, last_season, latest_team, status, ngs_status, ngs_status_short_description, years_of_experience, pff_position, pff_status, draft_year, draft_round, draft_pick, draft_team)
+    from '/Users/riley.gisseman/Downloads/nfl_players.csv'
+    delimiter ','
+    csv header;
