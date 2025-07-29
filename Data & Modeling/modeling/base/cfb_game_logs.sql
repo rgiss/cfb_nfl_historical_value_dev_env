@@ -289,7 +289,7 @@ select
   , glu.final_team
   , glu.player_name_id
   , coalesce(np.display_name, glu.player_name) || ': ' || coalesce(right(np.gsis_id, 6), final_team)                               as player_display_name
-  , coalesce(np.position_group, pp.position)                                                                                       as position_group
+  , coalesce(pp.position, np.position_group)                                                                                       as position_group
   , game_id
   , glu.team
   , opponent
@@ -333,18 +333,18 @@ select
         + sum(sacks_taken))
     over (partition by glu.team, true_date)                                                                                        as team_snaps
   , case
-        when coalesce(np.position_group, pp.position) = 'QB'
+        when coalesce(pp.position, np.position_group) = 'QB'
             then least(1, sum(pass_attempts) + sum(rush_attempts) + sum(sacks_taken)
                 / (1 + sum(sum(pass_attempts) + sum(case
-                                                        when coalesce(np.position_group, pp.position) = 'QB'
+                                                        when coalesce(pp.position, np.position_group) = 'QB'
                                                             then rush_attempts
                                                             else 0
                                                         end) + sum(sacks_taken)) over (partition by glu.team, true_date)))
-        when coalesce(np.position_group, pp.position) = 'RB'
+        when coalesce(pp.position, np.position_group) = 'RB'
             then least(sum(rush_attempts) / (1 + sum(sum(rush_attempts)) over (partition by glu.team, true_date) * 0.68 + 0.15), 1)
-        when coalesce(np.position_group, pp.position) = 'WR'
+        when coalesce(pp.position, np.position_group) = 'WR'
             then least(1 - 1 / (1 + exp(10.5 * sum(receptions) / (1 + sum(sum(pass_attempts)) over (partition by glu.team, true_date))) * 0.84), 1)
-        when coalesce(np.position_group, pp.position) = 'TE'
+        when coalesce(pp.position, np.position_group) = 'TE'
             then least(1 - 1 / (1 + exp(10.5 * sum(receptions) / (1 + sum(sum(pass_attempts)) over (partition by glu.team, true_date))) * 0.84), 1)
         end                                                                                                                        as snap_percent
   , sum(pass_attempts)                                                                                                             as pass_attempts

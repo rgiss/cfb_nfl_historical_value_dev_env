@@ -6,38 +6,38 @@ with players_grouping as (
       , year
       , gl.position_group
       , sum(team_snaps)                                                   as snaps
-      , (.37 + sum(receptions * opp_adj.rec_share_adj_ratio * team_adj.rec_share_adj_ratio))
+      , (.37 + sum(receptions * opp_adj.rec_share_adj_ratio * team_adj.rec_share_adj_ratio * nfl_adj.rec_share_adj_ratio))
                 / (6.9 + (sum(team_snaps) - sum(receptions)))             as receptions_per_non_reception
       , case
-            when sum(receiving_yards * opp_adj.rec_yds_adj_ratio * team_adj.rec_yds_adj_ratio) > 0
+            when sum(receiving_yards * opp_adj.rec_yds_adj_ratio * team_adj.rec_yds_adj_ratio * nfl_adj.rec_yds_adj_ratio) > 0
                 then (1.0 + sum(receiving_yards * opp_adj.rec_yds_adj_ratio * team_adj.rec_yds_adj_ratio)) / (.1 + (sum(receptions)))
             end                                                           as yards_per_reception
-      , (.16 + sum(receiving_touchdowns * opp_adj.rec_tds_adj_ratio * team_adj.rec_tds_adj_ratio))
+      , (.16 + sum(receiving_touchdowns * opp_adj.rec_tds_adj_ratio * team_adj.rec_tds_adj_ratio * nfl_adj.rec_tds_adj_ratio))
                 / (3.1 + (sum(receptions) - sum(receiving_touchdowns)))   as rec_touchdowns_per_non_rec_touchdown
-      , (1.38 + sum(rush_attempts * opp_adj.rush_share_adj_ratio * team_adj.rush_share_adj_ratio))
+      , (1.38 + sum(rush_attempts * opp_adj.rush_share_adj_ratio * team_adj.rush_share_adj_ratio * nfl_adj.rush_share_adj_ratio))
                 / (2.59 + (sum(team_snaps) - sum(rush_attempts)))         as rushs_per_non_rush
-      , (7.6 + sum(pass_attempts * opp_adj.pass_share_adj_ratio * team_adj.pass_share_adj_ratio))
+      , (7.6 + sum(pass_attempts * opp_adj.pass_share_adj_ratio * team_adj.pass_share_adj_ratio * nfl_adj.pass_share_adj_ratio))
                 / (6.4 + (sum(team_snaps) - sum(pass_attempts)))          as passes_per_non_pass
-      , (.36 + sum(completions * opp_adj.comp_pct_adj_ratio * team_adj.comp_pct_adj_ratio))
+      , (.36 + sum(completions * opp_adj.comp_pct_adj_ratio * team_adj.comp_pct_adj_ratio * nfl_adj.comp_pct_adj_ratio))
                 / (.225 + (sum(pass_attempts) - sum(completions)))        as completions_per_non_completion
       , case
-            when sum(rushing_yards * opp_adj.rush_yds_adj_ratio * team_adj.rush_yds_adj_ratio) > 0
-                then (33.11 + sum(rushing_yards * opp_adj.rush_yds_adj_ratio * team_adj.rush_yds_adj_ratio)) / (7.85 + (sum(rush_attempts)))
+            when sum(rushing_yards * opp_adj.rush_yds_adj_ratio * team_adj.rush_yds_adj_ratio * nfl_adj.rush_yds_adj_ratio) > 0
+                then (33.11 + sum(rushing_yards * opp_adj.rush_yds_adj_ratio * team_adj.rush_yds_adj_ratio * nfl_adj.rush_yds_adj_ratio)) / (7.85 + (sum(rush_attempts)))
             end                                                           as yards_per_rush
       , case
-            when sum(passing_yards * opp_adj.pass_yds_adj_ratio * team_adj.pass_yds_adj_ratio) > 0
-                then (7.374 + sum(passing_yards * opp_adj.pass_yds_adj_ratio * team_adj.pass_yds_adj_ratio)) / (1.2 * 0.62 + (sum(completions)))
+            when sum(passing_yards * opp_adj.pass_yds_adj_ratio * team_adj.pass_yds_adj_ratio * nfl_adj.pass_yds_adj_ratio) > 0
+                then (7.374 + sum(passing_yards * opp_adj.pass_yds_adj_ratio * team_adj.pass_yds_adj_ratio * nfl_adj.pass_yds_adj_ratio)) / (1.2 * 0.62 + (sum(completions)))
             end                                                           as yards_per_completion
-      , (.085 + sum(rushing_touchdowns * opp_adj.rush_tds_adj_ratio * team_adj.rush_tds_adj_ratio))
+      , (.085 + sum(rushing_touchdowns * opp_adj.rush_tds_adj_ratio * team_adj.rush_tds_adj_ratio * nfl_adj.rush_tds_adj_ratio))
                 / (3.97 + (sum(rush_attempts) - sum(rushing_touchdowns))) as rush_touchdowns_per_non_rush_touchdown
-      , (.377 + sum(passing_touchdowns * opp_adj.pass_tds_adj_ratio * team_adj.pass_tds_adj_ratio))
+      , (.377 + sum(passing_touchdowns * opp_adj.pass_tds_adj_ratio * team_adj.pass_tds_adj_ratio * nfl_adj.pass_tds_adj_ratio))
                 / (12.35 + (sum(completions) - sum(passing_touchdowns)))  as pass_touchdowns_per_non_pass_touchdown
     from cfb_game_logs                                      as gl
          left join cfb_opponent_strength_adjustment_metrics as opp_adj
                    on opp_adj.opponent_elo = coalesce(gl.opponent_elo, 1000) and opp_adj.adj_from_is_home_game = gl.is_home_game and opp_adj.position_group = gl.position_group
          left join cfb_team_strength_adjustment_metrics     as team_adj on team_adj.team_elo = coalesce(gl.team_elo, 1000) and team_adj.position_group = gl.position_group
-    where
-        experience_dec < 1
+         left join cfb_nfl_metrics_adjustment_dim           as nfl_adj on nfl_adj.position_group = gl.position_group
+    where team_snaps between 40 and 100 and experience_yrs < 1
     group by
         1, 2, 3
     )
