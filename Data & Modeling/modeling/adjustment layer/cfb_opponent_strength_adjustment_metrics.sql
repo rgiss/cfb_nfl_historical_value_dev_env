@@ -30,7 +30,7 @@ with cfb_opponent_strength_adjustment_dim as (
       , sum(a.pass_attempts) / nullif(sum(a.team_snaps - a.pass_attempts), 0) as adj_from_passes_per_non_pass
       , sum(b.pass_attempts) / nullif(sum(b.team_snaps - b.pass_attempts), 0) as adj_to_passes_per_non_pass
       , sum(a.completions) / nullif(sum(a.pass_attempts - a.completions), 0)  as adj_from_completions_per_non_completion
-      , sum(b.completions) / nullif(sum(b.pass_attempts - a.completions), 0)  as adj_to_completions_per_non_completion
+      , sum(b.completions) / nullif(sum(b.pass_attempts - b.completions), 0)  as adj_to_completions_per_non_completion
       , sum(a.passing_yards) / nullif(sum(a.completions), 0)                  as adj_from_passing_yards_per_completion
       , sum(b.passing_yards) / nullif(sum(b.completions), 0)                  as adj_to_passing_yards_per_completion
       , sum(a.passing_touchdowns) / nullif(sum(a.completions), 0)             as adj_from_passing_touchdowns_per_completion
