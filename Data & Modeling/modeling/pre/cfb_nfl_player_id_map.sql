@@ -4,7 +4,7 @@ with player_id_trace as (
     select distinct
         np.gsis_id
       , np.display_name
-      , ni.player_name as cfb_name
+      , ni.player_name                      as cfb_name
       , ni.player_name_id
       , max_pts
       , rank
@@ -14,9 +14,9 @@ with player_id_trace as (
     from nfl_players                   as np
          left join cfb_player_name_ids as ni
                    on lower(regexp_replace(replace(replace(replace(replace(replace(np.display_name, ' Jr.', ''), ' Sr.', ''), ' III', ''), ' IV', ''), ' II', '')
-                       , '[^A-Za-z0-9]', ''))
+                       , '[^A-Za-z0-9]', '','g'))
                            = lower(regexp_replace(replace(replace(replace(replace(replace(ni.player_name, ' Jr.', ''), ' Sr.', ''), ' III', ''), ' IV', ''), ' II', '')
-                           , '[^A-Za-z0-9]', ''))
+                           , '[^A-Za-z0-9]', '','g'))
                            and np.rookie_season between ni.year + 1 and ni.year + 2
                            and case
                                    when split_part(np.college_name, ';', 1) = 'Louisiana State'
