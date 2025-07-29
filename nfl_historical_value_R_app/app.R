@@ -404,16 +404,16 @@ server <- function(input, output, session) {
 
         # LOESS smoothing with fixed span of 0.7
         if (nrow(player_data) > 5) {
-          loess_fit <- loess(plot_metric ~ true_age, data = player_data, span = 0.7)
-          age_grid <- seq(min(player_data$true_age), max(player_data$true_age), length.out = 100)
+          loess_fit <- loess(plot_metric ~ approximate_age, data = player_data, span = 0.7)
+          age_grid <- seq(min(player_data$approximate_age), max(player_data$approximate_age), length.out = 100)
           pred_data <- data.frame(
-            true_age = age_grid,
+            approximate_age = age_grid,
             metric_value = predict(loess_fit, age_grid),
             player_display_name = player_display_name
           )
           p <- p + geom_line(
             data = pred_data,
-            aes(x = true_age, y = metric_value, color = player_display_name),
+            aes(x = approximate_age, y = metric_value, color = player_display_name),
             size = 1
           )
         }
@@ -422,7 +422,7 @@ server <- function(input, output, session) {
         if (input$show_points) {
           p <- p + geom_point(
             data = player_data,
-            aes(x = true_age, y = plot_metric, color = player_display_name),
+            aes(x = approximate_age, y = plot_metric, color = player_display_name),
             alpha = 0.5, size = 0.5
           )
         }
@@ -461,7 +461,7 @@ output$current_player_table <- renderDT({
       sparkline = list(
         list(
           values = est_value_over_roster_replacement,
-          ages = true_age,
+          ages = approximate_age,
           minAge = 17,
           maxAge = 47,
           currentValue = last(est_value_over_roster_replacement)  # Get most recent value for coloring
