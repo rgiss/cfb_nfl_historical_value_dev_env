@@ -17,15 +17,15 @@ with cfb_opponent_strength_adjustment_dim as (
       , sum(b.receptions) / nullif(sum(b.team_snaps - b.receptions), 0)       as adj_to_receptions_per_non_reception
       , sum(a.receiving_yards) / nullif(sum(a.receptions), 0)                 as adj_from_receiving_yards_per_reception
       , sum(b.receiving_yards) / nullif(sum(b.receptions), 0)                 as adj_to_receiving_yards_per_reception
-      , sum(a.receiving_touchdowns) / nullif(sum(a.receptions), 0)            as adj_from_receiving_touchdowns_per_reception
-      , sum(b.receiving_touchdowns) / nullif(sum(b.receptions), 0)            as adj_to_receiving_touchdowns_per_reception
+      , sum(a.receiving_touchdowns) / nullif(sum(a.receptions-a.receiving_touchdowns), 0)            as adj_from_receiving_touchdowns_per_non_receiving_touchdown
+      , sum(b.receiving_touchdowns) / nullif(sum(b.receptions-b.receiving_touchdowns), 0)            as adj_to_receiving_touchdowns_per_non_receiving_touchdown
         -- RUSHING
       , sum(a.rush_attempts) / nullif(sum(a.team_snaps - a.rush_attempts), 0) as adj_from_rushes_per_non_rush
       , sum(b.rush_attempts) / nullif(sum(b.team_snaps - b.rush_attempts), 0) as adj_to_rushes_per_non_rush
       , sum(a.rushing_yards) / nullif(sum(a.rush_attempts), 0)                as adj_from_rushing_yards_per_rush
       , sum(b.rushing_yards) / nullif(sum(b.rush_attempts), 0)                as adj_to_rushing_yards_per_rush
-      , sum(a.rushing_touchdowns) / nullif(sum(a.rush_attempts), 0)           as adj_from_rushing_touchdowns_per_rush
-      , sum(b.rushing_touchdowns) / nullif(sum(b.rush_attempts), 0)           as adj_to_rushing_touchdowns_per_rush
+      , sum(a.rushing_touchdowns) / nullif(sum(a.rush_attempts-a.rushing_touchdowns), 0)           as adj_from_rushing_touchdowns_per_non_rushing_touchdown
+      , sum(b.rushing_touchdowns) / nullif(sum(b.rush_attempts-b.rushing_touchdowns), 0)           as adj_to_rushing_touchdowns_per_non_rushing_touchdown
         -- PASSING
       , sum(a.pass_attempts) / nullif(sum(a.team_snaps - a.pass_attempts), 0) as adj_from_passes_per_non_pass
       , sum(b.pass_attempts) / nullif(sum(b.team_snaps - b.pass_attempts), 0) as adj_to_passes_per_non_pass
@@ -33,8 +33,8 @@ with cfb_opponent_strength_adjustment_dim as (
       , sum(b.completions) / nullif(sum(b.pass_attempts - b.completions), 0)  as adj_to_completions_per_non_completion
       , sum(a.passing_yards) / nullif(sum(a.completions), 0)                  as adj_from_passing_yards_per_completion
       , sum(b.passing_yards) / nullif(sum(b.completions), 0)                  as adj_to_passing_yards_per_completion
-      , sum(a.passing_touchdowns) / nullif(sum(a.completions), 0)             as adj_from_passing_touchdowns_per_completion
-      , sum(b.passing_touchdowns) / nullif(sum(b.completions), 0)             as adj_to_passing_touchdowns_per_completion
+      , sum(a.passing_touchdowns) / nullif(sum(a.completions-a.passing_touchdowns), 0)             as adj_from_passing_touchdowns_per_non_passing_touchdown
+      , sum(b.passing_touchdowns) / nullif(sum(b.completions-b.passing_touchdowns), 0)             as adj_to_passing_touchdowns_per_non_passing_touchdown
     from cfb_game_logs            as a
          inner join cfb_game_logs as b
                     on a.player_display_name = b.player_display_name and a.team = b.team and a.year = b.year and a.game_id <> b.game_id
@@ -80,19 +80,19 @@ with cfb_opponent_strength_adjustment_dim as (
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
                                           as receiving_yards_per_reception_delta
-      , (sum(sum(adj_to_receiving_touchdowns_per_reception * adj_to_cohort_size))
+      , (sum(sum(adj_to_receiving_touchdowns_per_non_receiving_touchdown * adj_to_cohort_size))
          over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
             / sum(sum(adj_to_cohort_size))
               over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following))
 --adj to ppr
                 /
-            nullif((sum(sum(adj_from_receiving_touchdowns_per_reception * adj_from_cohort_size))
+            nullif((sum(sum(adj_from_receiving_touchdowns_per_non_receiving_touchdown * adj_from_cohort_size))
                     over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
                     / sum(sum(adj_from_cohort_size))
                       over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)), 0)
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
-                                          as receiving_touchdowns_per_reception_delta
+                                          as receiving_touchdowns_per_non_receiving_touchdown_delta
 
         -- RUSHING
       , (sum(sum(adj_to_rushes_per_non_rush * adj_to_cohort_size))
@@ -121,19 +121,19 @@ with cfb_opponent_strength_adjustment_dim as (
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
                                           as rushing_yards_per_rush_delta
-      , (sum(sum(adj_to_rushing_touchdowns_per_rush * adj_to_cohort_size))
+      , (sum(sum(adj_to_rushing_touchdowns_per_non_rushing_touchdown * adj_to_cohort_size))
          over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
             / sum(sum(adj_to_cohort_size))
               over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following))
 --adj to ppr
                 /
-            nullif((sum(sum(adj_from_rushing_touchdowns_per_rush * adj_from_cohort_size))
+            nullif((sum(sum(adj_from_rushing_touchdowns_per_non_rushing_touchdown * adj_from_cohort_size))
                     over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
                     / sum(sum(adj_from_cohort_size))
                       over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)), 0)
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
-                                          as rushing_touchdowns_per_rush_delta
+                                          as rushing_touchdowns_per_non_rushing_touchdown_delta
 
         -- PASSING
       , (sum(sum(adj_to_passes_per_non_pass * adj_to_cohort_size))
@@ -175,19 +175,19 @@ with cfb_opponent_strength_adjustment_dim as (
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
                                           as passing_yards_per_completion_delta
-      , (sum(sum(adj_to_passing_touchdowns_per_completion * adj_to_cohort_size))
+      , (sum(sum(adj_to_passing_touchdowns_per_non_passing_touchdown * adj_to_cohort_size))
          over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
             / sum(sum(adj_to_cohort_size))
               over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following))
 --adj to ppr
                 /
-            nullif((sum(sum(adj_from_passing_touchdowns_per_completion * adj_from_cohort_size))
+            nullif((sum(sum(adj_from_passing_touchdowns_per_non_passing_touchdown * adj_from_cohort_size))
                     over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)
                     / sum(sum(adj_from_cohort_size))
                       over (partition by adj_from_is_home_game, position_group order by adj_to_opp_elo - adj_from_opp_elo rows between 100 preceding and 100 following)), 0)
             --adj from ppr
 -- to / from  = ratio (2 is  to > from! 0.5 is from > to.
-                                          as passing_touchdowns_per_completion_delta
+                                          as passing_touchdowns_per_non_passing_touchdown_delta
 
 
       , (sum(sum(adj_to_fp_ppr * adj_to_cohort_size))
@@ -229,15 +229,15 @@ with cfb_opponent_strength_adjustment_dim as (
       , regr_intercept(ln(nullif(receptions_per_non_reception_delta, 0)), true_opp_elo_delta)       as rec_share_intercept
       , regr_slope(ln(nullif(receiving_yards_per_reception_delta, 0)), true_opp_elo_delta)          as rec_yds_slope
       , regr_intercept(ln(nullif(receiving_yards_per_reception_delta, 0)), true_opp_elo_delta)      as rec_yds_intercept
-      , regr_slope(ln(nullif(receiving_touchdowns_per_reception_delta, 0)), true_opp_elo_delta)     as rec_tds_slope
-      , regr_intercept(ln(nullif(receiving_touchdowns_per_reception_delta, 0)), true_opp_elo_delta) as rec_tds_intercept
+      , regr_slope(ln(nullif(receiving_touchdowns_per_non_receiving_touchdown_delta, 0)), true_opp_elo_delta)     as rec_tds_slope
+      , regr_intercept(ln(nullif(receiving_touchdowns_per_non_receiving_touchdown_delta, 0)), true_opp_elo_delta) as rec_tds_intercept
         -- RUSHING
       , regr_slope(ln(nullif(rushes_per_non_rush_delta, 0)), true_opp_elo_delta)                    as rush_share_slope
       , regr_intercept(ln(nullif(rushes_per_non_rush_delta, 0)), true_opp_elo_delta)                as rush_share_intercept
       , regr_slope(ln(nullif(rushing_yards_per_rush_delta, 0)), true_opp_elo_delta)                 as rush_yds_slope
       , regr_intercept(ln(nullif(rushing_yards_per_rush_delta, 0)), true_opp_elo_delta)             as rush_yds_intercept
-      , regr_slope(ln(nullif(rushing_touchdowns_per_rush_delta, 0)), true_opp_elo_delta)            as rush_tds_slope
-      , regr_intercept(ln(nullif(rushing_touchdowns_per_rush_delta, 0)), true_opp_elo_delta)        as rush_tds_intercept
+      , regr_slope(ln(nullif(rushing_touchdowns_per_non_rushing_touchdown_delta, 0)), true_opp_elo_delta)            as rush_tds_slope
+      , regr_intercept(ln(nullif(rushing_touchdowns_per_non_rushing_touchdown_delta, 0)), true_opp_elo_delta)        as rush_tds_intercept
         -- PASSING
       , regr_slope(ln(nullif(passes_per_non_pass_delta, 0)), true_opp_elo_delta)                    as pass_share_slope
       , regr_intercept(ln(nullif(passes_per_non_pass_delta, 0)), true_opp_elo_delta)                as pass_share_intercept
@@ -245,8 +245,8 @@ with cfb_opponent_strength_adjustment_dim as (
       , regr_intercept(ln(nullif(completions_per_non_completion_delta, 0)), true_opp_elo_delta)     as comp_pct_intercept
       , regr_slope(ln(nullif(passing_yards_per_completion_delta, 0)), true_opp_elo_delta)           as pass_yds_slope
       , regr_intercept(ln(nullif(passing_yards_per_completion_delta, 0)), true_opp_elo_delta)       as pass_yds_intercept
-      , regr_slope(ln(nullif(passing_touchdowns_per_completion_delta, 0)), true_opp_elo_delta)      as pass_tds_slope
-      , regr_intercept(ln(nullif(passing_touchdowns_per_completion_delta, 0)), true_opp_elo_delta)  as pass_tds_intercept
+      , regr_slope(ln(nullif(passing_touchdowns_per_non_passing_touchdown_delta, 0)), true_opp_elo_delta)      as pass_tds_slope
+      , regr_intercept(ln(nullif(passing_touchdowns_per_non_passing_touchdown_delta, 0)), true_opp_elo_delta)  as pass_tds_intercept
     from cfb_opponent_strength_adjustment_agg
     where
         true_opp_elo_delta between -400 and 400
