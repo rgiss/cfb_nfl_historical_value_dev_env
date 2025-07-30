@@ -14,9 +14,9 @@ with player_id_trace as (
     from nfl_players                   as np
          left join cfb_player_name_ids as ni
                    on lower(regexp_replace(replace(replace(replace(replace(replace(np.display_name, ' Jr.', ''), ' Sr.', ''), ' III', ''), ' IV', ''), ' II', '')
-                       , '[^A-Za-z0-9]', '','g'))
+                       , '[^A-Za-z0-9]', '', 'g'))
                            = lower(regexp_replace(replace(replace(replace(replace(replace(ni.player_name, ' Jr.', ''), ' Sr.', ''), ' III', ''), ' IV', ''), ' II', '')
-                           , '[^A-Za-z0-9]', '','g'))
+                           , '[^A-Za-z0-9]', '', 'g'))
                            and np.rookie_season between ni.year + 1 and ni.year + 2
                            and case
                                    when split_part(np.college_name, ';', 1) = 'Louisiana State'
@@ -33,6 +33,8 @@ with player_id_trace as (
                                        then 'Texas A&M'
                                    when split_part(np.college_name, ';', 1) = 'Central Florida'
                                        then 'UCF'
+                                   when split_part(np.college_name, ';', 1) = 'Texas-El Paso'
+                                       then 'UTEP'
                                        else split_part(np.college_name, ';', 1)
                                    end = ni.final_team
          left join (
