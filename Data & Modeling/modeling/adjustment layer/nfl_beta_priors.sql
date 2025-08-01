@@ -20,6 +20,7 @@ with players_grouping as (
       , (0.85 + sum(rushing_touchdowns)) / (39.7 + (sum(rush_attempts) - sum(rushing_touchdowns)))          as rush_touchdowns_per_non_rush_touchdown
       , (3.77 + sum(passing_touchdowns)) / (123.5 + (sum(completions) - sum(passing_touchdowns)))           as pass_touchdowns_per_non_pass_touchdown
       , (1 + sum(snap_percent * team_snaps)) / (1.5 + sum(team_snaps * (1 - snap_percent)))                 as snaps_per_non_snap
+      , (sum(epa)) / (45 + sum(team_snaps))                                           as epa_per_snap
     from nfl_game_logs
     where
           experience_dec < 1
@@ -46,6 +47,7 @@ with players_grouping as (
       , sum(ln(receptions_per_non_reception_snap) * snaps) / sum(snaps)      as ln_weighted_avg_recs_snaps
       , sum(ln(yards_per_reception) * snaps) / sum(snaps)                    as ln_weighted_avg_rec_yds
       , sum(ln(rec_touchdowns_per_non_rec_touchdown) * snaps) / sum(snaps)   as ln_weighted_avg_rec_tds
+      , sum(epa_per_snap * snaps) / sum(snaps)                               as weighted_avg_epa_per_snap
     from players_grouping
     group by
         1, 2
@@ -136,6 +138,12 @@ with players_grouping as (
             / pow(exp(sqrt(sum(snaps * power(ln(yards_per_rush) - wm.ln_weighted_avg_rush_yds, 2)) / sum(snaps))), 2.32))                                 as rush_yds_share_1st
       , 1 - 1 / (1 + exp(sum(ln(yards_per_rush) * snaps) / sum(snaps))
             * pow(exp(sqrt(sum(snaps * power(ln(yards_per_rush) - wm.ln_weighted_avg_rush_yds, 2)) / sum(snaps))), 2.32))                                 as rush_yds_share_99th
+      , exp(sqrt(sum(snaps * power(epa_per_snap - wm.weighted_avg_epa_per_snap, 2)) / sum(snaps)))                                                        as weighted_geo_stdev_epa
+      , 1 - 1 / (1 + exp(sum(epa_per_snap * snaps) / sum(snaps)))                                                                                         as epa_per_snap --weighted geo mean between 0 and 1
+      , 1 - 1 / (1 + exp(sum(epa_per_snap * snaps) / sum(snaps))
+            / pow(exp(sqrt(sum(snaps * power(epa_per_snap - wm.weighted_avg_epa_per_snap, 2)) / sum(snaps))), 2.32))                                      as epa_per_snap_1st
+      , 1 - 1 / (1 + exp(sum(epa_per_snap * snaps) / sum(snaps))
+            * pow(exp(sqrt(sum(snaps * power(epa_per_snap - wm.weighted_avg_epa_per_snap, 2)) / sum(snaps))), 2.32))                                      as epa_per_snap_99th
     from players_grouping   as pg
          join weighted_mean as wm on wm.position_group = pg.position_group and wm.since_2012 = pg.since_2012
     group by
@@ -173,6 +181,12 @@ with players_grouping as (
          , (1 - rush_td_share) * ((rush_td_share * (1 - rush_td_share)) / (power((rush_td_share_99th - rush_td_share_1st) / 2, 2) / 12) - 1)      as beta_rush_tds_rushes
          , rush_yds_share * ((rush_yds_share * (1 - rush_yds_share)) / (power((rush_yds_share_99th - rush_yds_share_1st) / 2, 2) / 12) - 1)       as alpha_rush_yds
          , (1 - rush_yds_share) * ((rush_yds_share * (1 - rush_yds_share)) / (power((rush_yds_share_99th - rush_yds_share_1st) / 2, 2) / 12) - 1) as beta_rush_yds_rushes
+         , ((1 - epa_per_snap) * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1)
+            + epa_per_snap * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1))             as beta_epa_snaps
+         , ln((epa_per_snap * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1))
+            / ((1 - epa_per_snap) * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1)))
+            * ((1 - epa_per_snap) * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1)
+                + epa_per_snap * ((epa_per_snap * (1 - epa_per_snap)) / (power((epa_per_snap_99th - epa_per_snap_1st) / 2, 2) / 12) - 1))         as alpha_epa
     from position_group_log_norm_features
     )
 select *

@@ -3,12 +3,6 @@ create table cfb_historical_value_estimate as
 with game_log_dim as (
     select
         n.*
-      , opp_adj.rec_share_adj_ratio                                                     as opp_rec_share_adj_ratio
-      , team_adj.rec_share_adj_ratio                                                    as team_rec_share_adj_ratio
-      , opp_adj.rec_yds_adj_ratio                                                       as opp_rec_yds_adj_ratio
-      , team_adj.rec_yds_adj_ratio                                                      as team_rec_yds_adj_ratio
-      , opp_adj.rec_tds_adj_ratio                                                       as opp_rec_tds_adj_ratio
-      , team_adj.rec_tds_adj_ratio                                                      as team_rec_tds_adj_ratio
         -- PASSING STATS:
       , (sum(pass_attempts * opp_adj.pass_share_adj_ratio * team_adj.pass_share_adj_ratio * pow(0.25, -experience_dec)) over (partition by player_name, player_name_id order by true_date)
             + alpha_passes * pow(0.25, -experience_dec))
@@ -54,6 +48,10 @@ with game_log_dim as (
             + alpha_rush_yds * pow(0.25, -experience_dec))
                 / (sum(rush_attempts * pow(0.25, -experience_dec)) over (partition by player_name, player_name_id order by true_date)
                 + (beta_rush_yds_rushes) * pow(0.25, -experience_dec))                  as est_yds_per_rush
+      , (sum((epa + opp_adj.epa_factor + team_adj.epa_factor) * pow(0.25, -experience_dec)) over (partition by player_name, player_name_id order by true_date)
+            + alpha_epa * pow(0.25, -experience_dec))
+                / (sum(team_snaps * pow(0.25, -experience_dec)) over (partition by player_name, player_name_id order by true_date)
+                + (beta_epa_snaps) * pow(0.25, -experience_dec))                        as est_epa_per_snap
     from cfb_game_logs                                      as n
          inner join cfb_beta_priors                         as b on b.position_group = n.position_group and team_snaps > 0
          left join cfb_opponent_strength_adjustment_metrics as opp_adj

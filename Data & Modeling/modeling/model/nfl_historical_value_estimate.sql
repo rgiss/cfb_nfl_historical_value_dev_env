@@ -63,42 +63,59 @@ with base_stats as (
                                                                                                                 / (sum(rush_attempts * pow(0.5, -experience_dec)) over (partition by gsis_id order by game_date)
                 + (beta_rush_yds_rushes) * pow(0.5, -experience_dec))                  as est_yds_per_rush
       ,                                                                                                 (sum(epa * pow(0.7, -experience_dec)) over (partition by gsis_id order by game_date)
-            - 30 * pow(0.7, -experience_dec))
+            - alpha_epa * pow(0.7, -experience_dec))
                                                                                                                 / (sum(team_snaps * pow(0.7, -experience_dec))
                                                                                                                    over (partition by gsis_id order by game_date)
-                + (500) * pow(0.7, -experience_dec))                                   as est_epa_per_snap
+                + (beta_epa_snaps) * pow(0.7, -experience_dec))                        as est_epa_per_snap
     from nfl_game_logs              as n
          inner join nfl_beta_priors as b on b.position_group = n.position_group and b.since_2012 = (n.year >= 2012)
     )
-select *
-     , est_passes_per_snap * est_completion_pct                                 as est_completions
-     , est_passes_per_snap * est_completion_pct * est_yards_per_completion      as est_pass_yards
-     , est_passes_per_snap * est_completion_pct * est_tds_per_completion        as est_pass_td
-     , est_tgt_share * est_catch_pct                                            as est_receptions
-     , est_tgt_share * est_catch_pct * est_yds_per_rec                          as est_rec_yards
-     , est_tgt_share * est_catch_pct * est_touchdowns_per_reception             as est_rec_tds
-     , est_rushes_per_snap * est_yds_per_rush                                   as est_rush_yards
-     , est_rushes_per_snap * est_touchdowns_per_rush                            as est_rush_tds
-     , est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
-        + est_passes_per_snap * est_completion_pct * est_tds_per_completion * 6 as est_passing_fantasy_points_per_snap
-     , est_tgt_share * est_catch_pct
-        + est_tgt_share * est_catch_pct * est_yds_per_rec * 0.1
-        + est_tgt_share * est_catch_pct * est_touchdowns_per_reception * 6      as est_receiving_fantasy_points_per_snap
-     , est_rushes_per_snap * est_yds_per_rush * 0.1
-        + est_rushes_per_snap * est_touchdowns_per_rush * 6                     as est_rushing_fantasy_points_per_snap
-     , est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
-        + est_passes_per_snap * est_completion_pct * est_tds_per_completion * 6
-        + est_tgt_share * est_catch_pct
-        + est_tgt_share * est_catch_pct * est_yds_per_rec * 0.1
-        + est_tgt_share * est_catch_pct * est_touchdowns_per_reception * 6
-        + est_rushes_per_snap * est_yds_per_rush * 0.1
-        + est_rushes_per_snap * est_touchdowns_per_rush * 6                     as est_fantasy_points_per_snap
-     , (est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
+select
+    b.*
+  , est_passes_per_snap * est_completion_pct                                        as est_completions
+  , est_passes_per_snap * est_completion_pct * est_yards_per_completion             as est_pass_yards
+  , est_passes_per_snap * est_completion_pct * est_tds_per_completion               as est_pass_td
+  , est_tgt_share * est_catch_pct                                                   as est_receptions
+  , est_tgt_share * est_catch_pct * est_yds_per_rec                                 as est_rec_yards
+  , est_tgt_share * est_catch_pct * est_touchdowns_per_reception                    as est_rec_tds
+  , est_rushes_per_snap * est_yds_per_rush                                          as est_rush_yards
+  , est_rushes_per_snap * est_touchdowns_per_rush                                   as est_rush_tds
+  , est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
+            + est_passes_per_snap * est_completion_pct * est_tds_per_completion * 6 as est_passing_fantasy_points_per_snap
+  , est_tgt_share * est_catch_pct
+            + est_tgt_share * est_catch_pct * est_yds_per_rec * 0.1
+            + est_tgt_share * est_catch_pct * est_touchdowns_per_reception * 6      as est_receiving_fantasy_points_per_snap
+  , est_rushes_per_snap * est_yds_per_rush * 0.1
+            + est_rushes_per_snap * est_touchdowns_per_rush * 6                     as est_rushing_fantasy_points_per_snap
+  , est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
+            + est_passes_per_snap * est_completion_pct * est_tds_per_completion * 6
+            + est_tgt_share * est_catch_pct
+            + est_tgt_share * est_catch_pct * est_yds_per_rec * 0.1
+            + est_tgt_share * est_catch_pct * est_touchdowns_per_reception * 6
+            + est_rushes_per_snap * est_yds_per_rush * 0.1
+            + est_rushes_per_snap * est_touchdowns_per_rush * 6                     as est_fantasy_points_per_snap
+  , (est_passes_per_snap * est_completion_pct * est_yards_per_completion * 0.04
         + est_passes_per_snap * est_completion_pct * est_tds_per_completion * 6
         + est_tgt_share * est_catch_pct
         + est_tgt_share * est_catch_pct * est_yds_per_rec * 0.1
         + est_tgt_share * est_catch_pct * est_touchdowns_per_reception * 6
         + est_rushes_per_snap * est_yds_per_rush * 0.1
         + est_rushes_per_snap * est_touchdowns_per_rush * 6)
-        * coalesce(est_snap_share, 1) * 65                                      as est_fantasy_points_value
-from base_stats
+            * coalesce(est_snap_share, 1) * 65                                      as est_fantasy_points_value
+  , 65 * (est_snap_share * ra_epa.snap_share
+        + est_passes_per_snap * ra_epa.pass_share
+        + est_completion_pct * ra_epa.completion_percentage
+        + est_yards_per_completion * ra_epa.yards_per_completion
+        + est_tds_per_completion * ra_epa.tds_per_completion
+        + est_rushes_per_snap * ra_epa.rush_share
+        + est_yds_per_rush * ra_epa.yards_per_rush
+        + est_touchdowns_per_rush * ra_epa.tds_per_rush
+        + est_tgt_share * ra_epa.target_share
+        + est_catch_pct * ra_epa.catch_percentage
+        + est_yds_per_rec * ra_epa.yards_per_reception
+        + est_touchdowns_per_reception * ra_epa.tds_per_reception
+        + est_epa_per_snap * ra_epa.epa_per_snap
+        + ra_epa.intercept)
+                                                                                    as est_ra_epa_or_per_65_snaps
+from base_stats                        as b
+     left join nfl_ra_epa_coefficients as ra_epa on ra_epa.position_group = b.position_group

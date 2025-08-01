@@ -9,6 +9,8 @@ with cfb_nfl_metrics_adjustment_dim as (
         --, 2 / (1 / count(distinct a.game_id) + 1 / count(distinct b.game_id)) as cohort_size
       , avg(a.fantasy_points_ppr)                                                                                                                as adj_from_fp_ppr
       , avg(b.fantasy_points_ppr)                                                                                                                as adj_to_fp_ppr
+      , avg(a.epa + a_opp_adj.epa_factor + a_team_adj.epa_factor) / avg(a.team_snaps)                                                            as adj_from_epa
+      , avg(b.epa) / avg(b.team_snaps)                                                                                                           as adj_to_epa
         -- RECEIVING
       , sum(a.receptions * a_opp_adj.rec_share_adj_ratio * a_team_adj.rec_share_adj_ratio) / nullif(sum(a.team_snaps - a.receptions), 0)         as adj_from_receptions_non_reception
       , sum(b.receptions) / nullif(sum(b.team_snaps - b.receptions), 0)                                                                          as adj_to_receptions_non_reception
@@ -63,9 +65,9 @@ with cfb_nfl_metrics_adjustment_dim as (
          inner join nfl_game_logs                            as b
                     on a.player_display_name = b.player_display_name and (a.year = b.year - 1)
          inner join cfb_opponent_strength_adjustment_metrics as a_opp_adj
-                    on a_opp_adj.position_group = a.position_group and coalesce(a_opp_adj.opponent_elo,1000) = a.opponent_elo and a_opp_adj.adj_from_is_home_game = a.is_home_game
+                    on a_opp_adj.position_group = a.position_group and coalesce(a_opp_adj.opponent_elo, 1000) = a.opponent_elo and a_opp_adj.adj_from_is_home_game = a.is_home_game
          inner join cfb_team_strength_adjustment_metrics     as a_team_adj
-                    on a_team_adj.position_group = a.position_group and coalesce(a_team_adj.team_elo,1000) = a.team_elo
+                    on a_team_adj.position_group = a.position_group and coalesce(a_team_adj.team_elo, 1000) = a.team_elo
     where
           b.game_id is not null
       and a.game_id is not null
@@ -78,28 +80,31 @@ with cfb_nfl_metrics_adjustment_dim as (
     )
 select
     position_group
-     --RECEIVING
+  , coalesce((sum(adj_to_epa * adj_to_cohort_size) / sum(adj_to_cohort_size))
+                     - (sum(adj_from_epa * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                                              as epa_adjustment
+    --RECEIVING
   , coalesce((sum(adj_to_receptions_non_reception * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_receptions_non_reception * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rec_share_adj_ratio
+                     / (sum(adj_from_receptions_non_reception * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                         as rec_share_adj_ratio
   , coalesce((sum(adj_to_receiving_yards_per_reception * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_receiving_yards_per_reception * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rec_yds_adj_ratio
+                     / (sum(adj_from_receiving_yards_per_reception * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                    as rec_yds_adj_ratio
   , coalesce((sum(adj_to_receiving_touchdowns_per_non_receiving_touchdown * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_receiving_touchdowns_per_non_receiving_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rec_tds_adj_ratio
-     --RUSHING
+                     / (sum(adj_from_receiving_touchdowns_per_non_receiving_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1) as rec_tds_adj_ratio
+    --RUSHING
   , coalesce((sum(adj_to_rushes_per_non_rush * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_rushes_per_non_rush * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rush_share_adj_ratio
+                     / (sum(adj_from_rushes_per_non_rush * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                              as rush_share_adj_ratio
   , coalesce((sum(adj_to_rushing_yards_per_rush * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_rushing_yards_per_rush * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rush_yds_adj_ratio
+                     / (sum(adj_from_rushing_yards_per_rush * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                           as rush_yds_adj_ratio
   , coalesce((sum(adj_to_rushing_touchdowns_per_non_rushing_touchdown * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_rushing_touchdowns_per_non_rushing_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as rush_tds_adj_ratio
-     --PASSING
+                     / (sum(adj_from_rushing_touchdowns_per_non_rushing_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)     as rush_tds_adj_ratio
+    --PASSING
   , coalesce((sum(adj_to_passes_per_non_pass * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_passes_per_non_pass * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as pass_share_adj_ratio
+                     / (sum(adj_from_passes_per_non_pass * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                              as pass_share_adj_ratio
   , coalesce((sum(adj_to_completions_per_non_completion * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_completions_per_non_completion * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as comp_pct_adj_ratio
+                     / (sum(adj_from_completions_per_non_completion * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                   as comp_pct_adj_ratio
   , coalesce((sum(adj_to_passing_yards_per_completion * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_passing_yards_per_completion * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as pass_yds_adj_ratio
+                     / (sum(adj_from_passing_yards_per_completion * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)                     as pass_yds_adj_ratio
   , coalesce((sum(adj_to_passing_touchdowns_per_non_passing_touchdown * adj_to_cohort_size) / sum(adj_to_cohort_size))
-      / (sum(adj_from_passing_touchdowns_per_non_passing_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)),1) as pass_tds_adj_ratio
+                     / (sum(adj_from_passing_touchdowns_per_non_passing_touchdown * adj_from_cohort_size) / sum(adj_from_cohort_size)), 1)     as pass_tds_adj_ratio
 from cfb_nfl_metrics_adjustment_dim
-group by 1;
+group by
+    1;

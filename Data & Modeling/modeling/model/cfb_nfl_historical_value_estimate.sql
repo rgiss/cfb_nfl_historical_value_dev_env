@@ -169,162 +169,178 @@ with union_game_logs as (
     )
    , base_stats as (
     select
-            n.*
-      ,     (sum(snap_count * pow(0.15, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                       n.*
+      ,                (sum(snap_count * pow(0.15, -(true_date - 1999))) over (partition by player_display_name order by true_date)
             + nfl.alpha_snaps * pow(0.15, -(true_date - 1999)))
-                    / (
+                               / (
                     sum(snap_count / nullif(snap_percent, 0) * pow(0.15, -(true_date - 1999)))
                     over (partition by player_display_name order by true_date)
-                    + (nfl.alpha_snaps + nfl.beta_non_snaps) * pow(0.15, -(true_date - 1999)))                                                                     as est_snap_share
-            -- PASSING STATS:
-      ,     (sum(
-             pass_attempts
-                     * coalesce(opp_adj.pass_share_adj_ratio, 1)
-                     * coalesce(team_adj.pass_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.pass_share_adj_ratio, 1)
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                    + (nfl.alpha_snaps + nfl.beta_non_snaps) * pow(0.15, -(true_date - 1999)))                                                                  as est_snap_share
+                       -- PASSING STATS:
+      ,                (sum(
+                        pass_attempts
+                                * coalesce(opp_adj.pass_share_adj_ratio, 1)
+                                * coalesce(team_adj.pass_share_adj_ratio, 1)
+                                * coalesce(nfl_adj.pass_share_adj_ratio, 1)
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_passes, nfl.alpha_passes) * pow(0.25, -(true_date - 1999)))
-                    / (
-                    sum(((coalesce(snap_count, team_snaps)-pass_attempts)+(pass_attempts
-                     * coalesce(opp_adj.pass_share_adj_ratio, 1)
-                     * coalesce(team_adj.pass_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.pass_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999)))
+                               / (
+                    sum(((coalesce(snap_count, team_snaps) - pass_attempts) + (pass_attempts
+                    * coalesce(opp_adj.pass_share_adj_ratio, 1)
+                    * coalesce(team_adj.pass_share_adj_ratio, 1)
+                    * coalesce(nfl_adj.pass_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999)))
                     over (partition by player_display_name order by true_date)
-                    + (coalesce(cfb.alpha_passes, nfl.alpha_passes) + coalesce(cfb.beta_passes_snaps, nfl.beta_passes_snaps)) * pow(0.25, -(true_date - 1999)))    as est_passes_per_snap
-            -- snap count estimates not as good for pre 2012
-      ,     (sum(
-             completions
-                     * coalesce(opp_adj.comp_pct_adj_ratio, 1)
-                     * coalesce(team_adj.comp_pct_adj_ratio, 1)
-                     * coalesce(nfl_adj.comp_pct_adj_ratio, 1)
-                     * pow(0.5, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_passes, nfl.alpha_passes) + coalesce(cfb.beta_passes_snaps, nfl.beta_passes_snaps)) * pow(0.25, -(true_date - 1999))) as est_passes_per_snap
+                       -- snap count estimates not as good for pre 2012
+      ,                (sum(
+                        completions
+                                * coalesce(opp_adj.comp_pct_adj_ratio, 1)
+                                * coalesce(team_adj.comp_pct_adj_ratio, 1)
+                                * coalesce(nfl_adj.comp_pct_adj_ratio, 1)
+                                * pow(0.5, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_comps, nfl.alpha_comps) * pow(0.5, -(true_date - 1999)))
-                    / (sum(((pass_attempts - completions) + (completions
-                     * coalesce(opp_adj.comp_pct_adj_ratio, 1)
-                     * coalesce(team_adj.comp_pct_adj_ratio, 1)
-                     * coalesce(nfl_adj.comp_pct_adj_ratio, 1)))* pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + (coalesce(cfb.alpha_comps, nfl.alpha_comps) + coalesce(cfb.beta_comps_passes, nfl.beta_comps_passes)) * pow(0.5, -(true_date - 1999)))           as est_completion_pct
-      ,     (sum(
-             passing_touchdowns
-                     * coalesce(opp_adj.pass_tds_adj_ratio, 1)
-                     * coalesce(team_adj.pass_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.pass_tds_adj_ratio, 1)
-                     * pow(0.5, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (
+                    sum(((pass_attempts - completions) + (completions
+                    * coalesce(opp_adj.comp_pct_adj_ratio, 1)
+                    * coalesce(team_adj.comp_pct_adj_ratio, 1)
+                    * coalesce(nfl_adj.comp_pct_adj_ratio, 1))) * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_comps, nfl.alpha_comps) + coalesce(cfb.beta_comps_passes, nfl.beta_comps_passes)) * pow(0.5, -(true_date - 1999)))    as est_completion_pct
+      ,                (sum(
+                        passing_touchdowns
+                                * coalesce(opp_adj.pass_tds_adj_ratio, 1)
+                                * coalesce(team_adj.pass_tds_adj_ratio, 1)
+                                * coalesce(nfl_adj.pass_tds_adj_ratio, 1)
+                                * pow(0.5, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_pass_tds, nfl.alpha_pass_tds) * pow(0.5, -(true_date - 1999)))
-                    / (sum(((completions-passing_touchdowns)+
-             passing_touchdowns
-                     * coalesce(opp_adj.pass_tds_adj_ratio, 1)
-                     * coalesce(team_adj.pass_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.pass_tds_adj_ratio, 1)) * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + (coalesce(cfb.alpha_pass_tds, nfl.alpha_pass_tds) + coalesce(cfb.beta_pass_tds_comps, nfl.beta_pass_tds_comps)) * pow(0.5, -(true_date - 1999))) as est_tds_per_completion
-      ,     (sum(
-             passing_yards
-                     * coalesce(opp_adj.pass_yds_adj_ratio, 1)
-                     * coalesce(team_adj.pass_yds_adj_ratio, 1)
-                     * coalesce(nfl_adj.pass_yds_adj_ratio, 1)
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (
+                    sum(((completions - passing_touchdowns) +
+                passing_touchdowns
+                        * coalesce(opp_adj.pass_tds_adj_ratio, 1)
+                        * coalesce(team_adj.pass_tds_adj_ratio, 1)
+                        * coalesce(nfl_adj.pass_tds_adj_ratio, 1)) * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_pass_tds, nfl.alpha_pass_tds) + coalesce(cfb.beta_pass_tds_comps, nfl.beta_pass_tds_comps))
+                    * pow(0.5, -(true_date - 1999)))                                                                                                            as est_tds_per_completion
+      ,                (sum(
+                        passing_yards
+                                * coalesce(opp_adj.pass_yds_adj_ratio, 1)
+                                * coalesce(team_adj.pass_yds_adj_ratio, 1)
+                                * coalesce(nfl_adj.pass_yds_adj_ratio, 1)
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_pass_yds, nfl.alpha_pass_yds) * pow(0.25, -(true_date - 1999)))
-                    / (sum(completions * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + coalesce(cfb.beta_pass_yds_comps, nfl.beta_pass_yds_comps) * pow(0.25, -(true_date - 1999)))                                                     as est_yards_per_completion
-            -- RECEIVING STATS:
-      ,     (sum(
-             targets
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (sum(completions * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                + coalesce(cfb.beta_pass_yds_comps, nfl.beta_pass_yds_comps) * pow(0.25, -(true_date - 1999)))                                                  as est_yards_per_completion
+                       -- RECEIVING STATS:
+      ,                (sum(
+                        targets
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + nfl.alpha_tgts * pow(0.25, -(true_date - 1999)))
-                    / (
+                               / (
                     sum(coalesce(snap_count, team_snaps) * pow(0.25, -(true_date - 1999)))
                     over (partition by player_display_name order by true_date)
-                    + (nfl.alpha_tgts + nfl.beta_tgts_snaps) * pow(0.25, -(true_date - 1999)))                                                                     as est_tgt_share
-      ,     (sum(
-             receptions
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                    + (nfl.alpha_tgts + nfl.beta_tgts_snaps) * pow(0.25, -(true_date - 1999)))                                                                  as est_tgt_share
+      ,                (sum(
+                        receptions
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + nfl.alpha_recs * pow(0.25, -(true_date - 1999)))
-                    / (sum(targets * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + (nfl.alpha_recs + nfl.beta_recs_tgts) * pow(0.25, -(true_date - 1999)))                                                                          as est_catch_pct -- too high from 2003-2008
-      ,     (sum(
-             receptions
-                     * coalesce(opp_adj.rec_share_adj_ratio, 1)
-                     * coalesce(team_adj.rec_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.rec_share_adj_ratio, 1)
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (sum(targets * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                + (nfl.alpha_recs + nfl.beta_recs_tgts) * pow(0.25, -(true_date - 1999)))                                                                       as est_catch_pct -- too high from 2003-2008
+      ,                (sum(
+                        receptions
+                                * coalesce(opp_adj.rec_share_adj_ratio, 1)
+                                * coalesce(team_adj.rec_share_adj_ratio, 1)
+                                * coalesce(nfl_adj.rec_share_adj_ratio, 1)
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_recs, nfl.alpha_rec_snaps) * pow(0.25, -(true_date - 1999)))
-                    / (sum(((team_snaps-receptions)+(
-             receptions
-                     * coalesce(opp_adj.rec_share_adj_ratio, 1)
-                     * coalesce(team_adj.rec_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.rec_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + coalesce(cfb.beta_recs_snaps, nfl.beta_rec_snaps) * pow(0.25, -(true_date - 1999)))                                                              as est_rec_share
-      ,     (sum(
-             receiving_touchdowns
-                     * coalesce(opp_adj.rec_tds_adj_ratio, 1)
-                     * coalesce(team_adj.rec_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rec_tds_adj_ratio, 1)
-                     * pow(0.7, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (
+                    sum(((team_snaps - receptions) + (
+                receptions
+                        * coalesce(opp_adj.rec_share_adj_ratio, 1)
+                        * coalesce(team_adj.rec_share_adj_ratio, 1)
+                        * coalesce(nfl_adj.rec_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                    + coalesce(cfb.beta_recs_snaps, nfl.beta_rec_snaps) * pow(0.25, -(true_date - 1999)))                                                       as est_rec_share
+      ,                (sum(
+                        receiving_touchdowns
+                                * coalesce(opp_adj.rec_tds_adj_ratio, 1)
+                                * coalesce(team_adj.rec_tds_adj_ratio, 1)
+                                * coalesce(nfl_adj.rec_tds_adj_ratio, 1)
+                                * pow(0.7, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_rec_tds, nfl.alpha_rec_tds) * pow(0.7, -(true_date - 1999)))
-                    / (sum(((receptions-receiving_touchdowns)+(receiving_touchdowns
-                     * coalesce(opp_adj.rec_tds_adj_ratio, 1)
-                     * coalesce(team_adj.rec_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rec_tds_adj_ratio, 1))) * pow(0.7, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + (coalesce(cfb.alpha_rec_tds, nfl.alpha_rec_tds) + coalesce(cfb.beta_rec_tds_recs, nfl.beta_rec_tds_recs))
-                    * pow(0.7, -(true_date - 1999)))                                                                                                               as est_touchdowns_per_reception
-      ,     (sum(
-             receiving_yards
-                     * coalesce(opp_adj.rec_yds_adj_ratio, 1)
-                     * coalesce(team_adj.rec_yds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rec_yds_adj_ratio, 1)
-                     * pow(0.5, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (
+                    sum(((receptions - receiving_touchdowns) + (receiving_touchdowns
+                    * coalesce(opp_adj.rec_tds_adj_ratio, 1)
+                    * coalesce(team_adj.rec_tds_adj_ratio, 1)
+                    * coalesce(nfl_adj.rec_tds_adj_ratio, 1))) * pow(0.7, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_rec_tds, nfl.alpha_rec_tds) + coalesce(cfb.beta_rec_tds_recs, nfl.beta_rec_tds_recs))
+                    * pow(0.7, -(true_date - 1999)))                                                                                                            as est_touchdowns_per_reception
+      ,                (sum(
+                        receiving_yards
+                                * coalesce(opp_adj.rec_yds_adj_ratio, 1)
+                                * coalesce(team_adj.rec_yds_adj_ratio, 1)
+                                * coalesce(nfl_adj.rec_yds_adj_ratio, 1)
+                                * pow(0.5, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_rec_yds, nfl.alpha_rec_yds) * pow(0.5, -(true_date - 1999)))
-                    / (sum(receptions * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + coalesce(cfb.beta_rec_yds_recs, nfl.beta_rec_yds_recs) * pow(0.5, -(true_date - 1999)))                                                          as est_yds_per_rec
-            -- RUSHING STATS:
-      ,     (sum(
-             rush_attempts
-                     * coalesce(opp_adj.rush_share_adj_ratio, 1)
-                     * coalesce(team_adj.rush_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.rush_share_adj_ratio, 1)
-                     * pow(0.25, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (sum(receptions * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                + coalesce(cfb.beta_rec_yds_recs, nfl.beta_rec_yds_recs) * pow(0.5, -(true_date - 1999)))                                                       as est_yds_per_rec
+                       -- RUSHING STATS:
+      ,                (sum(
+                        rush_attempts
+                                * coalesce(opp_adj.rush_share_adj_ratio, 1)
+                                * coalesce(team_adj.rush_share_adj_ratio, 1)
+                                * coalesce(nfl_adj.rush_share_adj_ratio, 1)
+                                * pow(0.25, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_rushes, nfl.alpha_rushes) * pow(0.25, -(true_date - 1999)))
-                    / (
-                    sum(((coalesce(snap_count, team_snaps)-rush_attempts)+(rush_attempts
-                     * coalesce(opp_adj.rush_share_adj_ratio, 1)
-                     * coalesce(team_adj.rush_share_adj_ratio, 1)
-                     * coalesce(nfl_adj.rush_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999)))
+                               / (
+                    sum(((coalesce(snap_count, team_snaps) - rush_attempts) + (rush_attempts
+                    * coalesce(opp_adj.rush_share_adj_ratio, 1)
+                    * coalesce(team_adj.rush_share_adj_ratio, 1)
+                    * coalesce(nfl_adj.rush_share_adj_ratio, 1))) * pow(0.25, -(true_date - 1999)))
                     over (partition by player_display_name order by true_date)
-                    + (coalesce(cfb.alpha_rushes, nfl.alpha_rushes) + coalesce(cfb.beta_rushes_snaps, nfl.beta_rushes_snaps)) * pow(0.25, -(true_date - 1999)))    as est_rushes_per_snap
-      ,     (sum(
-             rushing_touchdowns
-                     * coalesce(opp_adj.rush_tds_adj_ratio, 1)
-                     * coalesce(team_adj.rush_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rush_tds_adj_ratio, 1)
-                     * pow(0.7, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_rushes, nfl.alpha_rushes) + coalesce(cfb.beta_rushes_snaps, nfl.beta_rushes_snaps)) * pow(0.25, -(true_date - 1999))) as est_rushes_per_snap
+      ,                (sum(
+                        rushing_touchdowns
+                                * coalesce(opp_adj.rush_tds_adj_ratio, 1)
+                                * coalesce(team_adj.rush_tds_adj_ratio, 1)
+                                * coalesce(nfl_adj.rush_tds_adj_ratio, 1)
+                                * pow(0.7, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_rush_tds, nfl.alpha_rush_tds) * pow(0.7, -(true_date - 1999)))
-                    / (sum(((rush_attempts-rushing_touchdowns)+(rushing_touchdowns
-                     * coalesce(opp_adj.rush_tds_adj_ratio, 1)
-                     * coalesce(team_adj.rush_tds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rush_tds_adj_ratio, 1))) * pow(0.7, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + (coalesce(cfb.alpha_rush_tds, nfl.alpha_rush_tds) + coalesce(cfb.beta_rush_tds_rushes, nfl.beta_rush_tds_rushes))
-                    * pow(0.7, -(true_date - 1999)))                                                                                                               as est_touchdowns_per_rush
-      ,     (sum(
-             rushing_yards
-                     * coalesce(opp_adj.rush_yds_adj_ratio, 1)
-                     * coalesce(team_adj.rush_yds_adj_ratio, 1)
-                     * coalesce(nfl_adj.rush_yds_adj_ratio, 1)
-                     * pow(0.5, -(true_date - 1999)))
-             over (partition by player_display_name order by true_date)
+                               / (
+                    sum(((rush_attempts - rushing_touchdowns) + (rushing_touchdowns
+                    * coalesce(opp_adj.rush_tds_adj_ratio, 1)
+                    * coalesce(team_adj.rush_tds_adj_ratio, 1)
+                    * coalesce(nfl_adj.rush_tds_adj_ratio, 1))) * pow(0.7, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                    + (coalesce(cfb.alpha_rush_tds, nfl.alpha_rush_tds) + coalesce(cfb.beta_rush_tds_rushes, nfl.beta_rush_tds_rushes))
+                    * pow(0.7, -(true_date - 1999)))                                                                                                            as est_touchdowns_per_rush
+      ,                (sum(
+                        rushing_yards
+                                * coalesce(opp_adj.rush_yds_adj_ratio, 1)
+                                * coalesce(team_adj.rush_yds_adj_ratio, 1)
+                                * coalesce(nfl_adj.rush_yds_adj_ratio, 1)
+                                * pow(0.5, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
             + coalesce(cfb.alpha_rush_yds, nfl.alpha_rush_yds) * pow(0.5, -(true_date - 1999)))
-                    / (sum(rush_attempts * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
-                + coalesce(cfb.beta_rush_yds_rushes, nfl.beta_rush_yds_rushes) * pow(0.5, -(true_date - 1999)))                                                    as est_yds_per_rush
+                               / (sum(rush_attempts * pow(0.5, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                + coalesce(cfb.beta_rush_yds_rushes, nfl.beta_rush_yds_rushes) * pow(0.5, -(true_date - 1999)))                                                 as est_yds_per_rush
+      ,                (sum(
+                        (epa
+                                + coalesce(opp_adj.epa_factor, 0)
+                                + coalesce(team_adj.epa_factor, 0)
+                                + coalesce(nfl_adj.epa_adjustment, 0))
+                                * pow(0.7, -(true_date - 1999)))
+                        over (partition by player_display_name order by true_date)
+            + coalesce(cfb.alpha_epa, nfl.alpha_epa) * pow(0.7, -(true_date - 1999)))
+                               / (sum(team_snaps * pow(0.7, -(true_date - 1999))) over (partition by player_display_name order by true_date)
+                + coalesce(cfb.beta_epa_snaps, nfl.beta_epa_snaps) * pow(0.7, -(true_date - 1999)))                                                             as est_epa_per_snap
     from union_game_logs                                    as n
          left join nfl_beta_priors                          as nfl on nfl.position_group = n.position_group and nfl.since_2012 = (n.year >= 2012) and n.league = 'nfl'
          left join cfb_beta_priors                          as cfb on cfb.position_group = n.position_group and n.league = 'cfb'
@@ -368,6 +384,19 @@ select
         + est_rushes_per_snap * est_yds_per_rush * 0.1
         + est_rushes_per_snap * est_touchdowns_per_rush * 6)
             * coalesce(est_snap_share, 1) * 65                                                                                          as est_fantasy_points_per_game
-from base_stats as b
+  , (est_passes_per_snap * ra_epa.pass_share
+        + est_completion_pct * ra_epa.completion_percentage
+        + est_yards_per_completion * ra_epa.yards_per_completion
+        + est_tds_per_completion * ra_epa.tds_per_completion
+        + est_rushes_per_snap * ra_epa.rush_share
+        + est_yds_per_rush * ra_epa.yards_per_rush
+        + est_touchdowns_per_rush * ra_epa.tds_per_rush
+        + est_rec_share * ra_epa.reception_share
+        + est_yds_per_rec * ra_epa.yards_per_reception
+        + est_touchdowns_per_reception * ra_epa.tds_per_reception
+        + ra_epa.intercept)
+                                                                                                                                        as est_epa
+from base_stats                        as b
      left join nfl_hex on nfl_hex.team_code = b.team
      left join cfb_hex on cfb_hex.team_name = b.team
+     left join nfl_ra_epa_coefficients as ra_epa on ra_epa.position_group = b.position_group

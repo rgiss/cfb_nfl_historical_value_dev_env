@@ -23,6 +23,8 @@ with player_years as (
                         then 'LSU'
                     when split_part(np.college_name, ';', 1) = 'Southern Methodist'
                         then 'SMU'
+                    when split_part(np.college_name, ';', 1) = 'N.C. State'
+                        then 'NC State'
                     when split_part(np.college_name, ';', 1) = 'Brigham Young'
                         then 'BYU'
                     when split_part(np.college_name, ';', 1) = 'Southern California'
