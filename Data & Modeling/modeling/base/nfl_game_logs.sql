@@ -2,19 +2,19 @@ drop table nfl_game_logs;
 create table nfl_game_logs as
 with game_logs_union as (
     select
-        p.display_name as player_name
+        p.display_name                                                                                                                                                                          as player_name
       , p.gsis_id
       , p.display_name || ': ' || right(gsis_id, 6)                                                                                                                                             as player_display_name
       , p.position_group
       , n.game_id
-      , n.posteam     as team
-      , n.defteam     as opponent
+      , n.posteam                                                                                                                                                                               as team
+      , n.defteam                                                                                                                                                                               as opponent
       , left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                                      as year
       , n.week
       , n.game_date
       , n.season_type
       , p.rookie_season
-      , p.birth_date  as birthdate
+      , p.birth_date                                                                                                                                                                            as birthdate
       , (n.game_date::date - make_date(left(cast(n.game_date::date - interval '45 days' as text), 4)::int, 9, 3))::float / 164
                 + left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                            as true_date
       , (n.game_date::date - p.birth_date::date) / 365.25                                                                                                                                       as age
@@ -23,12 +23,12 @@ with game_logs_union as (
                 + (game_date::date - make_date(left(cast(game_date::date - interval '45 days' as text), 4)::int, 9, 3))::float / 164
                 + left(cast(game_date::date - interval '45 days' as text), 4)::int - least(coalesce(p.rookie_season, left(current_date::text, 4)::int),
                                                                                            min(left(cast(game_date::date - interval '45 days' as text), 4)::int) over (partition by p.gsis_id)) as true_age
-      , 0             as pass_attempts
-      , 0             as completions
-      , 0             as passing_yards
-      , 0             as passing_air_yards
-      , 0             as passing_touchdowns
-      , 0             as sacks_taken
+      , 0                                                                                                                                                                                       as pass_attempts
+      , 0                                                                                                                                                                                       as completions
+      , 0                                                                                                                                                                                       as passing_yards
+      , 0                                                                                                                                                                                       as passing_air_yards
+      , 0                                                                                                                                                                                       as passing_touchdowns
+      , 0                                                                                                                                                                                       as sacks_taken
       , coalesce(count(n.receiver_player_id), 0)                                                                                                                                                as targets
       , sum(coalesce(n.complete_pass, 0))                                                                                                                                                       as receptions
       , sum(coalesce(n.receiving_yards, 0))                                                                                                                                                     as receiving_yards
@@ -42,13 +42,13 @@ with game_logs_union as (
                 when n.two_point_conv_result = 'success'
                     then 1
                     else 0
-                end)  as twopt_conversions
+                end)                                                                                                                                                                            as twopt_conversions
       , sum(coalesce(n.fumble, 0))                                                                                                                                                              as fumbles
       , sum(coalesce(n.fumble_lost, 0))                                                                                                                                                         as fumbles_lost
-      , 0             as passing_interception
+      , 0                                                                                                                                                                                       as passing_interception
       , sum(coalesce(n.interception, 0))                                                                                                                                                        as receiver_interception
-      , 0             as return_yards
-      , 0             as return_touchdowns
+      , 0                                                                                                                                                                                       as return_yards
+      , 0                                                                                                                                                                                       as return_touchdowns
       , sum(coalesce(n.wpa, 0))                                                                                                                                                                 as wpa
       , sum(greatest(-0.5, least(0.5, case
                                           when posteam = home_team
@@ -78,19 +78,19 @@ with game_logs_union as (
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
     union all
     select
-        p.display_name as player_name
+        p.display_name                                                                                                                                                                          as player_name
       , p.gsis_id
-      , replace(replace(replace(p.display_name, ' Jr.', ''), '''', ''), '.', '') || ': ' || right(gsis_id, 6)                                                                                   as player_display_name
+      , p.display_name || ': ' || right(gsis_id, 6)                                                                                   as player_display_name
       , p.position_group
       , n.game_id
-      , n.posteam     as team
-      , n.defteam     as opponent
+      , n.posteam                                                                                                                                                                               as team
+      , n.defteam                                                                                                                                                                               as opponent
       , left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                                      as year
       , n.week
       , n.game_date
       , n.season_type
       , p.rookie_season
-      , p.birth_date  as birthdate
+      , p.birth_date                                                                                                                                                                            as birthdate
       , (n.game_date::date - make_date(left(cast(n.game_date::date - interval '45 days' as text), 4)::int, 9, 3))::float / 164
                 + left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                            as true_date
       , (n.game_date::date - p.birth_date::date) / 365.25                                                                                                                                       as age
@@ -105,26 +105,26 @@ with game_logs_union as (
       , sum(coalesce(n.air_yards))                                                                                                                                                              as passing_air_yards
       , sum(coalesce(n.pass_touchdown, 0))                                                                                                                                                      as passing_touchdowns
       , count(sack_player_id)                                                                                                                                                                   as sacks_taken
-      , 0             as targets
-      , 0             as receptions
-      , 0             as receiving_yards
-      , 0             as receiving_air_yards
-      , 0             as receiving_yards_after_catch
-      , 0             as receiving_touchdowns
-      , 0             as rush_attempts
-      , 0             as rushing_yards
-      , 0             as rushing_touchdowns
+      , 0                                                                                                                                                                                       as targets
+      , 0                                                                                                                                                                                       as receptions
+      , 0                                                                                                                                                                                       as receiving_yards
+      , 0                                                                                                                                                                                       as receiving_air_yards
+      , 0                                                                                                                                                                                       as receiving_yards_after_catch
+      , 0                                                                                                                                                                                       as receiving_touchdowns
+      , 0                                                                                                                                                                                       as rush_attempts
+      , 0                                                                                                                                                                                       as rushing_yards
+      , 0                                                                                                                                                                                       as rushing_touchdowns
       , sum(case
                 when n.two_point_conv_result = 'success'
                     then 1
                     else 0
-                end)  as twopt_conversions
-      , 0             as fumbles
-      , 0             as fumbles_lost
+                end)                                                                                                                                                                            as twopt_conversions
+      , 0                                                                                                                                                                                       as fumbles
+      , 0                                                                                                                                                                                       as fumbles_lost
       , sum(coalesce(n.interception, 0))                                                                                                                                                        as passing_interception
-      , 0             as receiver_interception
-      , 0             as return_yards
-      , 0             as return_touchdowns
+      , 0                                                                                                                                                                                       as receiver_interception
+      , 0                                                                                                                                                                                       as return_yards
+      , 0                                                                                                                                                                                       as return_touchdowns
       , sum(coalesce(n.wpa, 0))                                                                                                                                                                 as wpa
       , sum(greatest(-0.5, least(0.5, case
                                           when posteam = home_team
@@ -154,9 +154,9 @@ with game_logs_union as (
         1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13
     union all
     select
-        p.display_name as player_name
+        p.display_name                                                                                                                                                                          as player_name
       , p.gsis_id
-      , replace(replace(replace(p.display_name, ' Jr.', ''), '''', ''), '.', '') || ': ' || right(gsis_id, 6)                                                                                   as player_display_name
+      , p.display_name || ': ' || right(gsis_id, 6)                                                                                   as player_display_name
       , p.position_group
       , n.game_id
       , coalesce(n.return_team, n.defteam)                                                                                                                                                      as team
@@ -164,13 +164,13 @@ with game_logs_union as (
             when n.posteam = coalesce(n.return_team, n.defteam)
                 then n.defteam
                 else n.posteam
-            end       as opponent
+            end                                                                                                                                                                                 as opponent
       , left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                                      as year
       , n.week
       , n.game_date
       , n.season_type
       , p.rookie_season
-      , p.birth_date  as birthdate
+      , p.birth_date                                                                                                                                                                            as birthdate
       , (n.game_date::date - make_date(left(cast(n.game_date::date - interval '45 days' as text), 4)::int, 9, 3))::float / 164
                 + left(cast(n.game_date::date - interval '45 days' as text), 4)::int                                                                                                            as true_date
       , (n.game_date::date - p.birth_date::date) / 365.25                                                                                                                                       as age
@@ -179,26 +179,26 @@ with game_logs_union as (
                 + (game_date::date - make_date(left(cast(game_date::date - interval '45 days' as text), 4)::int, 9, 3))::float / 164
                 + left(cast(game_date::date - interval '45 days' as text), 4)::int - least(coalesce(p.rookie_season, left(current_date::text, 4)::int),
                                                                                            min(left(cast(game_date::date - interval '45 days' as text), 4)::int) over (partition by p.gsis_id)) as true_age
-      , 0             as pass_attempts --attempts overestimating                                    as pass_attempts
-      , 0             as completions
-      , 0             as passing_yards
-      , 0             as passing_air_yards
-      , 0             as passing_touchdowns
-      , 0             as sacks_taken
-      , 0             as targets
-      , 0             as receptions
-      , 0             as receiving_yards
-      , 0             as receiving_air_yards
-      , 0             as receiving_yards_after_catch
-      , 0             as receiving_touchdowns
-      , 0             as rush_attempts
-      , 0             as rushing_yards
-      , 0             as rushing_touchdowns
-      , 0             as twopt_conversions
-      , 0             as fumbles
-      , 0             as fumbles_lost
-      , 0             as passing_interception
-      , 0             as receiver_interception
+      , 0                                                                                                                                                                                       as pass_attempts --attempts overestimating                                    as pass_attempts
+      , 0                                                                                                                                                                                       as completions
+      , 0                                                                                                                                                                                       as passing_yards
+      , 0                                                                                                                                                                                       as passing_air_yards
+      , 0                                                                                                                                                                                       as passing_touchdowns
+      , 0                                                                                                                                                                                       as sacks_taken
+      , 0                                                                                                                                                                                       as targets
+      , 0                                                                                                                                                                                       as receptions
+      , 0                                                                                                                                                                                       as receiving_yards
+      , 0                                                                                                                                                                                       as receiving_air_yards
+      , 0                                                                                                                                                                                       as receiving_yards_after_catch
+      , 0                                                                                                                                                                                       as receiving_touchdowns
+      , 0                                                                                                                                                                                       as rush_attempts
+      , 0                                                                                                                                                                                       as rushing_yards
+      , 0                                                                                                                                                                                       as rushing_touchdowns
+      , 0                                                                                                                                                                                       as twopt_conversions
+      , 0                                                                                                                                                                                       as fumbles
+      , 0                                                                                                                                                                                       as fumbles_lost
+      , 0                                                                                                                                                                                       as passing_interception
+      , 0                                                                                                                                                                                       as receiver_interception
       , sum(coalesce(n.return_yards, 0))                                                                                                                                                        as return_yards
       , sum(coalesce(n.return_touchdown, 0))                                                                                                                                                    as return_touchdowns
       , sum(coalesce(n.wpa, 0))                                                                                                                                                                 as wpa
@@ -289,7 +289,7 @@ select
                                                                else 0
                                                            end) + sum(sacks_taken),
                               0)                                                                                                                                                          as sacks_per_dropback
-  , sum(targets)as targets
+  , sum(targets)                                                                                                                                                                          as targets
   , sum(receptions)                                                                                                                                                                       as receptions
   , sum(receiving_yards)                                                                                                                                                                  as receiving_yards
   , sum(air_yards)                                                                                                                                                                        as air_yards
@@ -299,15 +299,15 @@ select
   , sum(rushing_yards)                                                                                                                                                                    as rushing_yards
   , sum(rushing_touchdowns)                                                                                                                                                               as rushing_touchdowns
   , sum(twopt_conversions)                                                                                                                                                                as twopt_conversions
-  , sum(fumbles)as fumbles
+  , sum(fumbles)                                                                                                                                                                          as fumbles
   , sum(fumbles_lost)                                                                                                                                                                     as fumbles_lost
   , sum(passing_interception)                                                                                                                                                             as passing_interception
   , sum(receiver_interception)                                                                                                                                                            as receiver_interception
   , sum(return_yards)                                                                                                                                                                     as return_yards
   , sum(return_touchdowns)                                                                                                                                                                as return_touchdowns
-  , sum(wpa)    as wpa
+  , sum(wpa)                                                                                                                                                                              as wpa
   , sum(logit_wpa)                                                                                                                                                                        as logit_wpa
-  , sum(epa)    as epa/*
+  , sum(epa)                                                                                                                                                                              as epa/*
   , sum(first_downs_added)                                                             as first_downs_added
   , sum(plus_yards_added)                                                              as plus_yards_added*/
   , sum(passing_yards) * 0.04 + sum(receiving_yards) * 0.1 + sum(rushing_yards) * 0.1

@@ -104,7 +104,8 @@ ui <- fluidPage(
                               "Rushing Fantasy Pts/Game" = "est_rushing_fantasy_points_per_game",
                               "Fantasy Pts/Snap" = "est_fantasy_points_per_snap",
                               "Value Over Backup" = "est_value_over_roster_replacement",
-                              "Value Over Waiver" = "est_value_over_waiver_replacement"
+                              "Value Over Waiver" = "est_value_over_waiver_replacement",
+                              "EPA per Snap" = "est_epa_per_snap"
                             ),
                             selected = "est_fantasy_points_per_game"
                           ),
@@ -362,7 +363,8 @@ server <- function(input, output, session) {
       "Rushing Fantasy Pts/Game" = "est_rushing_fantasy_points_per_game",
       "Fantasy Pts/Snap" = "est_fantasy_points_per_snap",
       "Value Over Backup" = "est_value_over_roster_replacement",
-      "Value Over Waiver" = "est_value_over_waiver_replacement"
+      "Value Over Waiver" = "est_value_over_waiver_replacement",
+      "EPA per Snap" = "est_epa_per_snap"
     ))[1])
 
     if (length(players) == 0) {
