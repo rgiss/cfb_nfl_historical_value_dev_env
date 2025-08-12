@@ -5,6 +5,6 @@ account: rgiss
 server: shinyapps.io
 hostUrl: https://api.shinyapps.io/v1
 appId: 14725310
-bundleId: 10709458
+bundleId: 10759948
 url: https://rgiss.shinyapps.io/nfl_r_app/
 version: 1

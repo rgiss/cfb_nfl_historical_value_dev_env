@@ -1,0 +1,10 @@
+name: nfl_r_app_fresh
+title:
+username: rgiss
+account: rgiss
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 15156610
+bundleId: 10721880
+url: https://rgiss.shinyapps.io/nfl_r_app_fresh/
+version: 1
