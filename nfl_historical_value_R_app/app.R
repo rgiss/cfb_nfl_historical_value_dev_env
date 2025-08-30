@@ -80,6 +80,7 @@ ui <- fluidPage(
                               "Fantasy Points Per Game" = "est_fantasy_points_per_game",
                               "Snap Share" = "est_snap_share",
                               "Passes Per Snap" = "est_passes_per_snap",
+                              "Sacks Per Dropback" = "est_sacks_per_dropback",
                               "Completion %" = "est_completion_pct",
                               "TDs Per Completion" = "est_tds_per_completion",
                               "Yards Per Completion" = "est_yards_per_completion",
@@ -102,7 +103,7 @@ ui <- fluidPage(
                               "Passing Fantasy Pts/Game" = "est_passing_fantasy_points_per_game",
                               "Receiving Fantasy Pts/Game" = "est_receiving_fantasy_points_per_game",
                               "Rushing Fantasy Pts/Game" = "est_rushing_fantasy_points_per_game",
-                              "Fantasy Pts/Snap" = "est_fantasy_points_per_snap",
+                              "Fantasy Pts/65 Snaps" = "est_fantasy_points_per_snap",
                               "Value Over Backup" = "est_value_over_roster_replacement",
                               "Value Over Waiver" = "est_value_over_waiver_replacement"
                             ),
@@ -151,7 +152,7 @@ ui <- fluidPage(
                 sliderInput("rush_td_pts", "Points per Rushing TD:",
                             min = 4, max = 6, value = 6, step = 1),
                 sliderInput("pass_yd_pts", "Points per Passing Yard:",
-                            min = 0.02, max = 0.1, value = 0.05, step = 0.01),
+                            min = 0.02, max = 0.1, value = 0.04, step = 0.01),
                 sliderInput("pass_td_pts", "Points per Passing TD:",
                             min = 4, max = 6, value = 4, step = 1),
                 sliderInput("tight_end_prem", "Tight End Premium",
@@ -322,13 +323,20 @@ server <- function(input, output, session) {
   output$fantasy_plot <- renderPlotly({
     req(input$metric_select)
 
-    # Use either the original data or custom calculated data
     plot_data <- if (input$metric_select == "est_fantasy_points_per_game") {
       custom_fantasy_points() %>%
-        mutate(plot_metric = custom_fantasy_points_per_game)  # Use custom calculated column
+        mutate(plot_metric = custom_fantasy_points_per_game)
+
+    } else if (input$metric_select == "est_fantasy_points_per_snap") {
+      custom_fantasy_points() %>%
+        mutate(
+          plot_metric = custom_fantasy_points_per_game /
+                        coalesce(est_snap_share, 1)
+        )
+
     } else {
       df() %>%
-        mutate(plot_metric = .data[[input$metric_select]])  # Use selected metric column
+        mutate(plot_metric = .data[[input$metric_select]])
     }
 
     players <- selected_players()
@@ -338,6 +346,7 @@ server <- function(input, output, session) {
       "Fantasy Points Per Game" = "est_fantasy_points_per_game",
       "Snap Share" = "est_snap_share",
       "Passes Per Snap" = "est_passes_per_snap",
+      "Sacks Per Dropback" = "est_sacks_per_dropback",
       "Completion %" = "est_completion_pct",
       "TDs Per Completion" = "est_tds_per_completion",
       "Yards Per Completion" = "est_yards_per_completion",
@@ -404,7 +413,7 @@ server <- function(input, output, session) {
 
         # LOESS smoothing with fixed span of 0.7
         if (nrow(player_data) > 5) {
-          loess_fit <- loess(plot_metric ~ approximate_age, data = player_data, span = 0.7)
+          loess_fit <- loess(plot_metric ~ approximate_age, data = player_data, span = 0.8)
           age_grid <- seq(min(player_data$approximate_age), max(player_data$approximate_age), length.out = 100)
           pred_data <- data.frame(
             approximate_age = age_grid,

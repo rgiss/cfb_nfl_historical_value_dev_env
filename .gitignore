@@ -6,3 +6,62 @@ Data & Modeling/data/raw_data/
 Data & Modeling/modeling/python/nfl_player_participation_2016_present.csv
 Data & Modeling/modeling/python/nfl_players.csv
 Data & Modeling/modeling/python/nfl_player_participation_2020_present.csv
+nfl_historical_value_R_app/secret_key_rhiny.R
+
+# Large CSV data files
+*.csv
+!*.template.csv
+!example_*.csv
+
+# Specific large data files
+fantasy-football-analyzer/static/cfb_nfl_historical_value_estimate.csv
+nfl_RA-epa.csv
+nfl_RA-rushing_yards.csv
+nfl_RA-sack.csv
+
+# Large training data files
+Data & Modeling/modeling/python/cfb_nfl_age_curve_train.csv
+Data & Modeling/modeling/python/cfb_nfl_age_curve_predictions*.csv
+
+# Python virtual environments
+.venv/
+venv/
+env/
+.env
+
+# Node modules and build artifacts
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.npm
+.yarn
+
+# SvelteKit build outputs
+.svelte-kit/
+build/
+dist/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Log files
+*.log
+logs/
+
+# Temporary files
+*.tmp
+*.temp
