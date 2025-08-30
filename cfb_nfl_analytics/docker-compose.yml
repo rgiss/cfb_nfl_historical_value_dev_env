@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: cfb_nfl_analytics
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: ${DBT_POSTGRES_PASSWORD}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  data_pipeline:
+    build: .
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_NAME: cfb_nfl_analytics
+      DB_USER: postgres
+      DBT_POSTGRES_PASSWORD: ${DBT_POSTGRES_PASSWORD}
+      DBT_PROFILES_DIR: /app
+    volumes:
+      - ./logs:/app/logs
+      - ./data:/app/data
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

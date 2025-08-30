@@ -1,0 +1,27 @@
+cfb_nfl_analytics:
+  outputs:
+    dev:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: "{{ env_var('DBT_POSTGRES_PASSWORD') }}"
+      port: 5432
+      dbname: cfb_nfl_analytics
+      schema: public
+      threads: 4
+      keepalives_idle: 0
+      search_path: "public"
+    
+    prod:
+      type: postgres
+      host: localhost
+      user: postgres
+      password: "{{ env_var('DBT_POSTGRES_PASSWORD') }}"
+      port: 5432
+      dbname: cfb_nfl_analytics
+      schema: prod
+      threads: 4
+      keepalives_idle: 0
+      search_path: "public"
+
+  target: dev

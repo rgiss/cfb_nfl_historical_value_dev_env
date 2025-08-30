@@ -1,0 +1,77 @@
+version: 2
+
+sources:
+  - name: raw
+    description: Raw data tables from existing postgres.public schema
+    database: postgres
+    schema: public
+    tables:
+      # NFL Data
+      - name: nfl_pbp_1999_2024
+        description: NFL play-by-play data from nflfastR (1999-2024)
+      
+      - name: nfl_players
+        description: NFL player information
+      
+      - name: nfl_hex
+        description: NFL team colors
+      
+      - name: nfl_game_logs
+        description: NFL game logs
+      
+      - name: nfl_snap_counts_2012_2024
+        description: NFL snap count data
+      
+      - name: nfl_ra_epa_coefficients
+        description: NFL RA EPA regression coefficients
+      
+      - name: nfl_2020_2023_ra_epa
+        description: NFL RA EPA data for 2020-2023
+      
+      - name: nfl_beta_priors
+        description: NFL beta priors for modeling
+      
+      - name: nfl_historical_value_estimate
+        description: NFL historical value estimates
+      
+      # CFB Data
+      - name: cfb_pbp_2014_2024
+        description: CFB play-by-play data (2014-2024)
+      
+      - name: college_football_play_by_play_data
+        description: Alias for CFB play-by-play data
+        identifier: cfb_pbp_2014_2024
+      
+      - name: cfb_recruiting_data
+        description: CFB recruiting data
+      
+      - name: cfb_hex
+        description: CFB team colors
+      
+      - name: cfb_conferences
+        description: CFB conference information
+      
+      - name: cfb_clean_player_positions
+        description: CFB clean player positions
+      
+      - name: cfb_game_logs
+        description: CFB game logs
+      
+      - name: cfb_elo_data
+        description: CFB ELO ratings data
+      
+      - name: cfb_beta_priors
+        description: CFB beta priors for modeling
+      
+      - name: cfb_historical_value_estimate
+        description: CFB historical value estimates
+      
+      # Combined CFB/NFL Data
+      - name: cfb_nfl_player_id_map
+        description: Mapping between CFB and NFL player IDs
+      
+      - name: cfb_nfl_historical_value_estimate
+        description: Combined CFB/NFL historical value estimates
+      
+      - name: cfb_nfl_age_curve_predictions
+        description: Age curve predictions for CFB/NFL transitions
