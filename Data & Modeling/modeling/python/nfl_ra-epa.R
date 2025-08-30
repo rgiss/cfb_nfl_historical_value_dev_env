@@ -16,15 +16,15 @@ pp_data <- load_participation(
 colnames(pp_data)
 
 pp_filtered <- pp_data %>%
-  filter(qb_kneel == 0, qb_spike == 0, qb_dropback = 1)
+  filter(qb_kneel == 0, qb_spike == 0)
 
 # --- Step 2: Select relevant columns ---
 pp_subset <- pp_filtered %>%
-  select(nflverse_game_id, play_id, penalty, offense_players, defense_players) %>%
+  select(nflverse_game_id, play_id, epa, offense_players, defense_players) %>%
   filter(!is.na(offense_players), !is.na(defense_players))  %>%
-  mutate(penalty = ifelse(is.na(penalty), 0, penalty))
+  mutate(epa = ifelse(is.na(epa), 0, epa))
 
-summary(pp_subset$penalty)
+summary(pp_subset$epa)
 
 
 # --- Step 3: Parse player strings into lists ---
@@ -100,18 +100,22 @@ num_players <- ncol(X_sparse)
 # Build identity matrix for priors (diagonal matrix)
 I_sparse <- Diagonal(n = num_players)
 
+# Response vector
+y <- pp_long$epa
+
+
 # Augment design matrix and response vector
 X_aug <- rbind(X_sparse, sqrt(prior_weight) * I_sparse)
 y_aug <- c(y, sqrt(prior_weight) * beta_0_vec)
 
 # Fit Ridge model with prior
 lambda_val <- 0.1  # You can tune this
-ridge_model <- glmnet(X_sparse, y, alpha = 0, lambda = lambda_val, intercept = FALSE)
+ridge_model <- glmnet(X_aug, y_aug, alpha = 0, lambda = lambda_val, intercept = FALSE)
 
 # Get coefficients (exclude intercept)
 coefs <- as.numeric(coef(ridge_model, s = lambda_val))[-1]
 players <- colnames(X_sparse)
-ra_penalty <- data.frame(gsis_id = players, ra_penalty_per_play = coefs)
+ra_epa <- data.frame(gsis_id = players, ra_epa_per_play = coefs)
 
 # --- Step 6: Play counts per player ---
 player_counts <- design_df %>%
@@ -120,22 +124,36 @@ player_counts <- design_df %>%
   rename(gsis_id = player)
 
 # --- Step 7: Merge + Total Impact ---
-ra_penalty_df <- ra_penalty %>%
+ra_epa_df <- ra_epa %>%
   left_join(player_counts, by = "gsis_id") %>%
   mutate(
-    ra_penalty_total_impact = ra_penalty_per_play * play_count
+    ra_epa_total_impact = ra_epa_per_play * play_count
   )
 
-colnames(load_players)
+# --- Step 7b: Add RA-EPA per play above replacement (subtract prior) ---
+ra_epa_df <- ra_epa_df %>%
+  left_join(
+    player_positions %>% 
+      select(gsis_id, position_group) %>% 
+      mutate(position_prior = sapply(position_group, function(pos) {
+        if (pos %in% names(position_priors)) position_priors[[pos]] else 0
+      })),
+    by = "gsis_id"
+  ) %>%
+  mutate(
+    ra_epa_above_replacement = ra_epa_per_play - position_prior
+  )
 
 # --- Step 8: Add Player Names (requires nflreadr::load_rosters) ---
 player_meta <- load_players()
-ra_penalty_named <- ra_penalty_df %>%
+ra_epa_named <- ra_epa_df %>%
   left_join(player_meta %>% select(gsis_id, display_name, position_group), by = "gsis_id") %>%
-  arrange(desc(ra_penalty_total_impact))
+  arrange(desc(ra_epa_total_impact))
 
 # --- Step 9: Save to CSV ---
-write_csv(ra_penalty_named, "nfl_RA-penalty.csv")
+output_file <- "nfl_RA-epa.csv"
+write_csv(ra_epa_named, output_file)
+cat("File saved to:", normalizePath(output_file), "\n")
 
 # --- Step 10: Preview top players ---
-print(head(ra_penalty_named, 20))
+print(head(ra_epa_named, 20))
