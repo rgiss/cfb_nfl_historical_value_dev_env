@@ -5,7 +5,7 @@
 
 	interface CurrentPlayerData {
 		player_display_name: string;
-		team_abbreviation: string;
+		team: string;
 		position: string;
 		est_value_over_roster_replacement: number;
 		est_value_over_waiver_replacement: number;
@@ -35,7 +35,7 @@
 		const searchFiltered = searchTerm 
 			? filtered.filter(player => 
 				player.player_display_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-				player.team_abbreviation.toLowerCase().includes(searchTerm.toLowerCase()) ||
+				player.team.toLowerCase().includes(searchTerm.toLowerCase()) ||
 				player.position.toLowerCase().includes(searchTerm.toLowerCase())
 			)
 			: filtered;
@@ -44,7 +44,7 @@
 		currentPlayers = searchFiltered
 			.map(player => ({
 				player_display_name: player.player_display_name,
-				team_abbreviation: player.team_abbreviation,
+				team: player.team,
 				position: player.position,
 				est_value_over_roster_replacement: player.est_value_over_roster_replacement,
 				est_value_over_waiver_replacement: player.est_value_over_waiver_replacement,
@@ -93,7 +93,7 @@
 			headers.join(','),
 			...currentPlayers.map(player => [
 				`"${player.player_display_name}"`,
-				player.team_abbreviation,
+				player.team,
 				player.position,
 				formatNumber(player.est_value_over_roster_replacement),
 				formatNumber(player.est_value_over_waiver_replacement),
@@ -147,9 +147,9 @@
 						</button>
 					</th>
 					<th>
-						<button class="sort-btn" on:click={() => handleSort('team_abbreviation')}>
+						<button class="sort-btn" on:click={() => handleSort('team')}>
 							Team
-							{#if sortColumn === 'team_abbreviation'}
+							{#if sortColumn === 'team'}
 								<span class="sort-arrow">{sortDirection === 'asc' ? '↑' : '↓'}</span>
 							{/if}
 						</button>
@@ -248,7 +248,7 @@
 				{#each currentPlayers as player}
 					<tr>
 						<td class="player-name">{player.player_display_name}</td>
-						<td>{player.team_abbreviation}</td>
+						<td>{player.team}</td>
 						<td>{player.position}</td>
 						<td class="number-cell" class:negative={player.est_value_over_roster_replacement < 0}>
 							{formatNumber(player.est_value_over_roster_replacement)}

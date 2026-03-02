@@ -33,4 +33,4 @@ select
             then count(game_id) over (partition by year, pos_team order by game_id)::float / (1 + count(game_id) over (partition by year, pos_team)::float)
             else week::float / 17
         end as week_dec
-from games;
+from games

@@ -2,6 +2,7 @@
 	import { onMount } from 'svelte';
 	import PlayerSelector from '$lib/components/PlayerSelector.svelte';
 	import MetricSelector from '$lib/components/MetricSelector.svelte';
+	import TeamSelector from '$lib/components/TeamSelector.svelte';
 	import FantasyPlot from '$lib/components/FantasyPlot.svelte';
 	import PlayerTable from '$lib/components/PlayerTable.svelte';
 	import ScoringSettings from '$lib/components/ScoringSettings.svelte';
@@ -9,6 +10,7 @@
 	import PlotControls from '$lib/components/PlotControls.svelte';
 	import { loadData, isLoading, error } from '$lib/stores/dataStore';
 	import { showScoringSettings, showLeagueSettings } from '$lib/stores/settingsStore';
+	import { selectedTeam } from '$lib/stores/playerStore';
 
 	let activeTab = 'description';
 
@@ -83,6 +85,7 @@
 					<aside class="sidebar">
 						<div class="control-panel">
 							<MetricSelector />
+							<TeamSelector on:teamSelected={(e) => selectedTeam.set(e.detail.team)} />
 							<PlayerSelector />
 							<PlotControls />
 

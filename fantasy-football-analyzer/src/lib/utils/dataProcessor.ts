@@ -72,6 +72,14 @@ export const filterByAgeRange = (
   );
 };
 
+// Filter data by team
+export function filterByTeam(data: ProcessedPlayerData[], team: string): ProcessedPlayerData[];
+export function filterByTeam(data: PlayerData[], team: string): PlayerData[];
+export function filterByTeam(data: PlayerData[], team: string): PlayerData[] {
+  if (!team) return data;
+  return data.filter(player => player.team === team);
+}
+
 // Get the most recent team color for a player
 export const getPlayerColor = (playerData: PlayerData[]): string => {
   if (playerData.length === 0) return '#999999';
@@ -83,102 +91,220 @@ export const getPlayerColor = (playerData: PlayerData[]): string => {
   return recentData?.team_primary_color_hex || '#999999';
 };
 
-// Tricube weight function for LOESS
+// Enhanced tricube weight function for LOESS
 const tricubeWeight = (t: number): number => {
   if (Math.abs(t) >= 1) return 0;
   const abs_t = Math.abs(t);
-  return Math.pow(1 - Math.pow(abs_t, 3), 3);
+  const u = 1 - Math.pow(abs_t, 3);
+  return Math.pow(u, 3);
 };
 
-// Weighted least squares regression
-const weightedRegression = (
+// Robust weighted least squares regression with polynomial fitting
+const weightedPolynomialRegression = (
   x: number[], 
   y: number[], 
   weights: number[], 
-  targetX: number
+  targetX: number,
+  degree: number = 2
 ): number => {
-  let sumW = 0;
-  let sumWX = 0;
-  let sumWY = 0;
-  let sumWXX = 0;
-  let sumWXY = 0;
+  const n = x.length;
+  if (n === 0) return 0;
   
-  for (let i = 0; i < x.length; i++) {
+  // Center the data around targetX for numerical stability
+  const centeredX = x.map(xi => xi - targetX);
+  
+  // Build the design matrix and weighted sums
+  const maxDegree = Math.min(degree, n - 1);
+  const matrixSize = maxDegree + 1;
+  const A: number[][] = Array(matrixSize).fill(0).map(() => Array(matrixSize).fill(0));
+  const b: number[] = Array(matrixSize).fill(0);
+  
+  for (let i = 0; i < n; i++) {
     const w = weights[i];
-    sumW += w;
-    sumWX += w * x[i];
-    sumWY += w * y[i];
-    sumWXX += w * x[i] * x[i];
-    sumWXY += w * x[i] * y[i];
+    if (w <= 0) continue;
+    
+    const xi = centeredX[i];
+    const yi = y[i];
+    
+    for (let j = 0; j <= maxDegree; j++) {
+      const xij = Math.pow(xi, j);
+      b[j] += w * yi * xij;
+      
+      for (let k = 0; k <= maxDegree; k++) {
+        const xik = Math.pow(xi, k);
+        A[j][k] += w * xij * xik;
+      }
+    }
   }
   
-  // Calculate linear regression coefficients
-  const denominator = sumW * sumWXX - sumWX * sumWX;
-  if (Math.abs(denominator) < 1e-12) {
-    // Fallback to weighted mean if regression is degenerate
-    return sumWY / sumW;
+  // Solve the linear system using Gaussian elimination
+  try {
+    const coefficients = solveLinearSystem(A, b);
+    // Evaluate polynomial at targetX (which becomes 0 in centered coordinates)
+    return coefficients[0]; // Only the constant term matters at x=0
+  } catch {
+    // Fallback to weighted mean
+    let weightedSum = 0;
+    let totalWeight = 0;
+    for (let i = 0; i < n; i++) {
+      if (weights[i] > 0) {
+        weightedSum += weights[i] * y[i];
+        totalWeight += weights[i];
+      }
+    }
+    return totalWeight > 0 ? weightedSum / totalWeight : 0;
   }
-  
-  const a = (sumW * sumWXY - sumWX * sumWY) / denominator;
-  const b = (sumWY * sumWXX - sumWX * sumWXY) / denominator;
-  
-  return a * targetX + b;
 };
 
-// Generate LOESS regression for a player's data
+// Simple Gaussian elimination solver
+const solveLinearSystem = (A: number[][], b: number[]): number[] => {
+  const n = A.length;
+  const augmented = A.map((row, i) => [...row, b[i]]);
+  
+  // Forward elimination
+  for (let i = 0; i < n; i++) {
+    // Find pivot
+    let maxRow = i;
+    for (let k = i + 1; k < n; k++) {
+      if (Math.abs(augmented[k][i]) > Math.abs(augmented[maxRow][i])) {
+        maxRow = k;
+      }
+    }
+    
+    // Swap rows
+    [augmented[i], augmented[maxRow]] = [augmented[maxRow], augmented[i]];
+    
+    // Check for singular matrix
+    if (Math.abs(augmented[i][i]) < 1e-12) {
+      throw new Error('Singular matrix');
+    }
+    
+    // Eliminate
+    for (let k = i + 1; k < n; k++) {
+      const factor = augmented[k][i] / augmented[i][i];
+      for (let j = i; j <= n; j++) {
+        augmented[k][j] -= factor * augmented[i][j];
+      }
+    }
+  }
+  
+  // Back substitution
+  const x = new Array(n);
+  for (let i = n - 1; i >= 0; i--) {
+    x[i] = augmented[i][n];
+    for (let j = i + 1; j < n; j++) {
+      x[i] -= augmented[i][j] * x[j];
+    }
+    x[i] /= augmented[i][i];
+  }
+  
+  return x;
+};
+
+// Enhanced LOESS regression with better smoothing
 export const generateLoessRegression = (
   playerData: ProcessedPlayerData[], 
   span: number = 0.8
 ): { age: number; value: number }[] => {
-  if (playerData.length < 3) return [];
+  if (playerData.length < 2) return [];
   
-  // Sort by age
-  const sortedData = [...playerData].sort((a, b) => a.approximate_age - b.approximate_age);
-  const x = sortedData.map(d => d.approximate_age);
-  const y = sortedData.map(d => d.plot_metric);
+  // Filter out null, undefined, NaN, and zero values, then sort by age and remove duplicates
+  const cleanData = playerData
+    .filter(d => 
+      d.approximate_age != null && 
+      d.plot_metric != null && 
+      !isNaN(d.approximate_age) && 
+      !isNaN(d.plot_metric) &&
+      d.plot_metric !== 0 // Also filter out explicit zeros which are likely missing data
+    )
+    .sort((a, b) => a.approximate_age - b.approximate_age)
+    .filter((item, index, arr) => 
+      index === 0 || item.approximate_age !== arr[index - 1].approximate_age
+    );
+  
+  if (cleanData.length < 2) return [];
+  
+  const x = cleanData.map(d => d.approximate_age);
+  const y = cleanData.map(d => d.plot_metric);
+  const n = cleanData.length;
+  
+  // Adaptive span - use more neighbors for sparse data
+  const adaptiveSpan = Math.max(0.3, Math.min(0.9, span));
+  const k = Math.max(3, Math.min(n, Math.floor(n * adaptiveSpan)));
   
   const result: { age: number; value: number }[] = [];
-  const n = sortedData.length;
-  const k = Math.max(3, Math.floor(n * span)); // Number of neighbors to consider
   
-  // Generate smooth curve points
+  // Generate many more points for a smooth curve
   const ageRange = x[x.length - 1] - x[0];
-  const numPoints = Math.max(n, 20); // At least 20 points for smooth curve
+  const numPoints = Math.max(50, n * 3); // Much more points for smoothness
   
   for (let i = 0; i < numPoints; i++) {
     const targetAge = x[0] + (ageRange * i) / (numPoints - 1);
     
-    // Calculate distances from target point
-    const distances = x.map(xi => Math.abs(xi - targetAge));
+    // Calculate distances and find k nearest neighbors
+    const distances = x.map((xi, idx) => ({ 
+      distance: Math.abs(xi - targetAge), 
+      index: idx 
+    }));
     
-    // Find the k nearest neighbors
-    const sortedIndices = distances
-      .map((d, idx) => ({ distance: d, index: idx }))
-      .sort((a, b) => a.distance - b.distance)
-      .slice(0, k);
+    distances.sort((a, b) => a.distance - b.distance);
+    const nearestNeighbors = distances.slice(0, k);
     
-    // Calculate weights using tricube function
-    const maxDistance = Math.max(...sortedIndices.map(si => si.distance));
+    // Calculate bandwidth (distance to k-th nearest neighbor)
+    const bandwidth = nearestNeighbors[nearestNeighbors.length - 1].distance;
+    
+    // Calculate tricube weights
     const weights = new Array(n).fill(0);
-    
-    for (const { distance, index } of sortedIndices) {
-      if (maxDistance > 0) {
-        weights[index] = tricubeWeight(distance / maxDistance);
+    for (const { distance, index } of nearestNeighbors) {
+      if (bandwidth > 0) {
+        weights[index] = tricubeWeight(distance / bandwidth);
       } else {
-        weights[index] = 1; // All points are at the same x-value
+        weights[index] = 1; // All points are at the same location
       }
     }
     
-    // Fit weighted regression and predict
-    const predictedValue = weightedRegression(x, y, weights, targetAge);
+    // Use polynomial regression (degree 1 for linear, 2 for quadratic)
+    const degree = n >= 6 ? 2 : 1; // Use quadratic for enough data points
+    const predictedValue = weightedPolynomialRegression(x, y, weights, targetAge, degree);
     
-    result.push({
-      age: targetAge,
-      value: predictedValue
-    });
+    // Only add the point if the prediction is valid (not NaN or null)
+    if (!isNaN(predictedValue) && isFinite(predictedValue)) {
+      result.push({
+        age: targetAge,
+        value: predictedValue
+      });
+    }
   }
   
-  return result;
+  // Apply additional smoothing filter to reduce any remaining jumpiness
+  return applySmoothingFilter(result);
+};
+
+// Apply a simple moving average filter for extra smoothing
+const applySmoothingFilter = (
+  data: { age: number; value: number }[]
+): { age: number; value: number }[] => {
+  if (data.length <= 3) return data;
+  
+  const smoothed = [...data];
+  const windowSize = 3;
+  
+  for (let i = 1; i < data.length - 1; i++) {
+    let sum = 0;
+    let count = 0;
+    
+    for (let j = Math.max(0, i - windowSize); j <= Math.min(data.length - 1, i + windowSize); j++) {
+      sum += data[j].value;
+      count++;
+    }
+    
+    smoothed[i] = {
+      age: data[i].age,
+      value: sum / count
+    };
+  }
+  
+  return smoothed;
 };
 
 // Get label for metric
@@ -211,6 +337,8 @@ export const getMetricLabel = (metric: string): string => {
     'est_receiving_fantasy_points_per_game': 'Receiving Fantasy Pts/Game',
     'est_rushing_fantasy_points_per_game': 'Rushing Fantasy Pts/Game',
     'est_fantasy_points_per_snap': 'Fantasy Pts/Snap',
+    'est_epa': 'Estimated EPA',
+    'est_epa_per_snap': 'Estimated EPA Per Snap',
     'est_value_over_roster_replacement': 'Value Over Backup',
     'est_value_over_waiver_replacement': 'Value Over Waiver'
   };

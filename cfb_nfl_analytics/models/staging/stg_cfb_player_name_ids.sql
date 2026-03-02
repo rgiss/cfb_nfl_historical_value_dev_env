@@ -14,7 +14,7 @@ with player_years as (
       , year
       , team
       , position_group
-    from base.cfb_game_logs
+    from public.cfb_game_logs
     )
    , player_histories as (
     select distinct
@@ -43,7 +43,7 @@ with player_years as (
                         then 'Texas A&M'
                         else split_part(np.college_name, ';', 1)
                     end = a.team
-         left join staging.stg_cfb_player_name_ids as b on a.player_name = b.player_name and b.year between a.year - 2 and a.year - 1 and (a.team = b.team or a.position_group = b.position_group)-- and np.display_name is null
+         left join public.cfb_player_name_ids as b on a.player_name = b.player_name and b.year between a.year - 2 and a.year - 1 and (a.team = b.team or a.position_group = b.position_group)-- and np.display_name is null
     )
    , player_name_ids as (
     select

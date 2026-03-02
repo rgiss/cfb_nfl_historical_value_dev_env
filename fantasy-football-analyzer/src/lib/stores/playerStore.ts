@@ -10,6 +10,7 @@ export const selectedMetric = writable<string>('est_fantasy_points_per_game');
 export const ageRange = writable<[number, number]>([17, 47]);
 export const showPoints = writable<boolean>(true);
 export const loessSpan = writable<number>(0.8); // LOESS smoothing parameter (0.1 = very smooth, 1.0 = less smooth)
+export const selectedTeam = writable<string>(''); // Selected NFL team filter (empty = all teams)
 
 // Helper functions for managing selected players
 export const addPlayer = (playerName: string, color: string, visible: boolean = true): void => {
@@ -73,6 +74,8 @@ export const metricOptions = [
   { value: 'est_receiving_fantasy_points_per_game', label: 'Receiving Fantasy Pts/Game' },
   { value: 'est_rushing_fantasy_points_per_game', label: 'Rushing Fantasy Pts/Game' },
   { value: 'est_fantasy_points_per_snap', label: 'Fantasy Pts/65 Snaps' },
+  { value: 'est_epa', label: 'Estimated EPA' },
+  { value: 'est_epa_per_snap', label: 'Estimated EPA Per Snap' },
   { value: 'est_value_over_roster_replacement', label: 'Value Over Backup' },
   { value: 'est_value_over_waiver_replacement', label: 'Value Over Waiver' }
 ];

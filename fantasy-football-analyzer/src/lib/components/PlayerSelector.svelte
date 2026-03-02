@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { data, getPlayerNames, getPlayerData } from '$lib/stores/dataStore';
-	import { selectedPlayers, addPlayer } from '$lib/stores/playerStore';
-	import { getPlayerColor } from '$lib/utils/dataProcessor';
+	import { selectedPlayers, addPlayer, selectedTeam } from '$lib/stores/playerStore';
+	import { getPlayerColor, filterByTeam } from '$lib/utils/dataProcessor';
 	import { onMount } from 'svelte';
 
 	let searchTerm = '';
@@ -28,7 +28,10 @@
 
 	$: {
 		if (searchTerm.length > 0) {
-			const playerNames = getPlayerNames($data);
+			// First filter by team if a team is selected
+			let teamFilteredData = $selectedTeam ? filterByTeam($data, $selectedTeam) : $data;
+			
+			const playerNames = getPlayerNames(teamFilteredData);
 			filteredPlayers = playerNames
 				.filter(name => 
 					name.toLowerCase().includes(searchTerm.toLowerCase())

@@ -3,7 +3,6 @@ version: 2
 sources:
   - name: raw
     description: Raw data tables from existing postgres.public schema
-    database: postgres
     schema: public
     tables:
       # NFL Data
@@ -37,10 +36,10 @@ sources:
       # CFB Data
       - name: cfb_pbp_2014_2024
         description: CFB play-by-play data (2014-2024)
-      
+        identifier: college_football_play_by_play_data
+
       - name: college_football_play_by_play_data
-        description: Alias for CFB play-by-play data
-        identifier: cfb_pbp_2014_2024
+        description: CFB play-by-play data (canonical name)
       
       - name: cfb_recruiting_data
         description: CFB recruiting data
@@ -75,3 +74,12 @@ sources:
       
       - name: cfb_nfl_age_curve_predictions
         description: Age curve predictions for CFB/NFL transitions
+
+      - name: cfb_nfl_total_age_curve
+        description: Cumulative age curve adjustments by position and age (exp of cumulative log changes)
+
+      - name: cfb_recruiting_prior_adjustment
+        description: Recruiting rating-based prior adjustments for CFB metrics by position
+
+      - name: nfl_historical_replacement_player
+        description: Historical positional replacement levels (starter and waiver) by year

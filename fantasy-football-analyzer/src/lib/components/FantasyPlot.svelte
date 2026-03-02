@@ -7,13 +7,15 @@
 		selectedMetric, 
 		ageRange, 
 		showPoints,
-		loessSpan
+		loessSpan,
+		selectedTeam
 	} from '$lib/stores/playerStore';
 	import { scoringSettings } from '$lib/stores/settingsStore';
 	import { 
 		calculateCustomFantasyPoints, 
 		getPlotMetric, 
 		filterByAgeRange,
+		filterByTeam,
 		generateLoessRegression,
 		getMetricLabel 
 	} from '$lib/utils/dataProcessor';
@@ -23,8 +25,8 @@
 
 	// Chart dimensions
 	const margin = { top: 20, right: 80, bottom: 50, left: 80 };
-	let width = 800;
-	let height = 500;
+	let width = 600;
+	let height = 450;
 	let innerWidth: number;
 	let innerHeight: number;
 
@@ -34,7 +36,8 @@
 	// Reactive data processing
 	$: processedData = calculateCustomFantasyPoints($data, $scoringSettings);
 	$: plotData = getPlotMetric(processedData, $selectedMetric, $scoringSettings);
-	$: filteredData = filterByAgeRange(plotData, $ageRange);
+	$: teamFilteredData = filterByTeam(plotData, $selectedTeam);
+	$: filteredData = filterByAgeRange(teamFilteredData, $ageRange);
 	$: metricLabel = getMetricLabel($selectedMetric);
 
 	// Chart scales
@@ -59,11 +62,11 @@
 		}
 	}
 
-	// Line generator
+	// Line generator with smooth curves
 	const line = d3.line<{age: number, value: number}>()
 		.x(d => xScale(d.age))
 		.y(d => yScale(d.value))
-		.curve(d3.curveCardinal);
+		.curve(d3.curveBasis); // Much smoother than curveCardinal
 
 	function updateChart() {
 		if (!svgElement || !xScale || !yScale) return;
@@ -86,35 +89,20 @@
 			.attr("stroke-width", 0.5)
 			.attr("opacity", 0.7);
 
-		// Add grid lines
-		const xAxis = d3.axisBottom(xScale)
-			.tickSize(-innerHeight)
-			.tickFormat(() => "");
-		
-		const yAxis = d3.axisLeft(yScale)
-			.tickSize(-innerWidth)
-			.tickFormat(() => "");
-
-		g.append("g")
-			.attr("class", "grid")
-			.attr("transform", `translate(0,${innerHeight})`)
-			.call(xAxis)
-			.selectAll("line")
-			.attr("stroke", "#e0e0e0")
-			.attr("stroke-width", 1);
-
-		g.append("g")
-			.attr("class", "grid")
-			.call(yAxis)
-			.selectAll("line")
-			.attr("stroke", "#f0f0f0")
-			.attr("stroke-width", 1);
-
 		// Plot data for each selected player
 		for (const [playerName, playerInfo] of $selectedPlayers.entries()) {
 			if (!playerInfo.visible) continue;
 
-			const playerData = filteredData.filter(d => d.player_display_name === playerName);
+			const rawPlayerData = filteredData.filter(d => d.player_display_name === playerName);
+			// Filter out null/undefined/NaN values before processing
+			const playerData = rawPlayerData.filter(d => 
+				d.approximate_age != null && 
+				d.plot_metric != null && 
+				!isNaN(d.approximate_age) && 
+				!isNaN(d.plot_metric) &&
+				d.plot_metric !== 0 // Filter out zeros which are likely missing data
+			);
+			
 			if (playerData.length === 0) continue;
 
 			// Add LOESS regression line
@@ -124,7 +112,10 @@
 					.datum(regressionData)
 					.attr("fill", "none")
 					.attr("stroke", playerInfo.color)
-					.attr("stroke-width", 2)
+					.attr("stroke-width", 3)
+					.attr("stroke-linecap", "round")
+					.attr("stroke-linejoin", "round")
+					.style("shape-rendering", "geometricPrecision")
 					.attr("d", line);
 			}
 
@@ -180,7 +171,7 @@
 		// Add legend
 		const legend = svg.append("g")
 			.attr("class", "legend")
-			.attr("transform", `translate(${width - margin.right + 10}, ${margin.top})`);
+			.attr("transform", `translate(${width - margin.right - 160}, ${margin.top})`);
 
 		let legendY = 0;
 		for (const [playerName, playerInfo] of $selectedPlayers.entries()) {

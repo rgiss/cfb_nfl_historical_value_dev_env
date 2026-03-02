@@ -120,7 +120,7 @@ with game_logs_union as (
                                                                    ' End Zone', ''), '  ', ' ')
                             and cpn.year = n.year and cpn.team = n.pos_team
          left join {{ ref("stg_cfb_player_name_ids") }}               as cpni on cpni.player_name = cpn.clean_player_name and cpni.team = n.pos_team and cpni.year = cpn.year
-                          when n.down = 4
+    /*                    when n.down = 4
                               then 'go'
                               else 'slow'
                           end = c_init.type
@@ -204,7 +204,7 @@ with game_logs_union as (
                                                                    ' End Zone', ''), '  ', ' ')
                             and cpn.year = n.year and cpn.team = n.pos_team
          left join {{ ref("stg_cfb_player_name_ids") }}               as cpni on cpni.player_name = cpn.clean_player_name and cpni.team = n.pos_team and cpni.year = cpn.year
-                          when n.down = 4
+    /*                    when n.down = 4
                               then 'go'
                               else 'slow'
                           end = c_init.type
@@ -271,7 +271,7 @@ with game_logs_union as (
                     on cpn.pre_clean_player_name = coalesce(n.punt_returner_player_name, n.kickoff_returner_player_name)
                             and cpn.year = n.year and cpn.team = n.def_pos_team
          left join {{ ref("stg_cfb_player_name_ids") }}               as cpni on cpni.player_name = cpn.clean_player_name and cpni.team = n.def_pos_team and cpni.year = cpn.year
-                          when n.down = 4
+    /*                    when n.down = 4
                               then 'go'
                               else 'slow'
                           end = c_init.type
@@ -431,7 +431,8 @@ from game_logs_union                      as glu
      inner join {{ ref("stg_cfb_conferences") }}           as cc on cc.pos_team = glu.team and cc.year = glu.year
      left join {{ ref("stg_cfb_clean_player_positions") }} as pp on pp.year = glu.year and pp.player_name = glu.player_name
      -- Static reference to break circular dependency
-     left join staging.stg_cfb_nfl_player_id_map           as map on map.cfb_name = glu.player_name and map.player_name_id = glu.player_name_id
+     -- Static reference to break circular dependency (cfb_game_logs → stg_cfb_nfl_player_id_map → cfb_game_logs)
+     left join public.cfb_nfl_player_id_map                as map on map.cfb_name = glu.player_name and map.player_name_id = glu.player_name_id
      left join {{ source("raw", "nfl_players") }}                as np on np.gsis_id = map.gsis_id
      left join {{ source("raw", "cfb_elo_data") }}               as elo on elo.team = glu.team and elo.year = glu.year and elo.week = case
                                                                                                                    when glu.week = 1

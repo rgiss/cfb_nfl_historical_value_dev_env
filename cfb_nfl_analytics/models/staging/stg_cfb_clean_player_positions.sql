@@ -24,6 +24,6 @@ select
             then 'RB'
             else 'OTHER'
         end as position
-from base.cfb_game_logs
+from public.cfb_game_logs
 group by
     1, 2
